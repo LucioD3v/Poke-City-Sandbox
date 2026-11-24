@@ -16,12 +16,13 @@ Todo el juego vive en **un solo archivo HTML** (`poke_city_sandbox.html`), sin d
 - **Ciclo día/noche** de 4 minutos, con reloj junto al minimapa. De noche se encienden farolas, ventanas y faros de los autos.
 - **Autos:** tráfico en los carriles y autos estacionados. Puedes robarlos (`F`), conducirlos, chocar, atropellar y hacerlos explotar.
 - **Peatones** que caminan, huyen si atacas y quedan KO si los golpeas o atropellas.
-- **Bicicleta** para moverte más rápido.
+- **Bicicleta** para moverte más rápido; si te derrotan, la pierdes y reaparece en su lugar al rato.
 
 ### Combate, búsqueda y Squad
 - **Sistema de búsqueda (`★`) y `SQUAD`:** el caos sube tu nivel de búsqueda y aparecen patrullas coordinadas.
 - **Atropello:** si chocas al Squad o al Líder con un auto a buena velocidad, salen volando, quedan noqueados y reciben daño según tu velocidad.
 - **Apuntado:** con mouse apuntas al cursor. Si no usas el mouse, el ataque apunta al enemigo más cercano o hacia donde caminaste por última vez, y siempre se ve una mira.
+- **Ataques con forma según el tipo:** rayo (Pikachu), gota de agua (Squirtle), hojas giratorias (Bulbasaur) y bola de fuego (Charmander).
 - **Ataques nuevos desbloqueables** con mini-misiones: **Ráfaga** (`Q`) y **Escudo eléctrico** (`R`).
 
 ### Historia, NPCs e interiores
