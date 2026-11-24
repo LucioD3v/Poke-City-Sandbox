@@ -1,0 +1,2367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Poké-City Sandbox — RPG Pixel Sandbox</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: rgba(15, 23, 42, 0.88);
+      --panel-border: rgba(148, 163, 184, 0.25);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #f59e0b;
+      --hp: #22c55e;
+      --xp: #38bdf8;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #game-wrap {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #090d16;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+
+    /* Pantalla de selección */
+    #start-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(30, 41, 59, 0.96), rgba(9, 13, 22, 0.98));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 40;
+      overflow-y: auto;
+    }
+
+    .title-badge {
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(24px, 4vw, 36px);
+      text-align: center;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      max-width: 560px;
+      text-align: center;
+      margin: 0 0 22px;
+    }
+
+    .starter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      width: 100%;
+      max-width: 720px;
+      margin-bottom: 20px;
+    }
+
+    .starter-card {
+      background: rgba(30, 41, 59, 0.75);
+      border: 2px solid rgba(148, 163, 184, 0.22);
+      border-radius: 14px;
+      padding: 14px 12px;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+    }
+
+    .starter-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.45);
+    }
+
+    .starter-card.selected {
+      border-color: var(--accent);
+      background: rgba(245, 158, 11, 0.14);
+    }
+
+    .starter-name {
+      font-weight: 800;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .starter-type {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      opacity: 0.9;
+      margin-bottom: 6px;
+    }
+
+    .starter-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #f59e0b, #ea580c);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 13px 28px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(234, 88, 12, 0.35);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.06);
+    }
+
+    /* HUD Superior Compacto */
+    .hud-top {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: flex-start;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .hud-box {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      backdrop-filter: blur(8px);
+      border-radius: 12px;
+      padding: 8px 11px;
+      pointer-events: auto;
+    }
+
+    .player-hud {
+      min-width: 185px;
+      max-width: 240px;
+    }
+
+    .player-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 5px;
+    }
+
+    .bar-track {
+      height: 8px;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .bar-hp {
+      height: 100%;
+      background: linear-gradient(90deg, #16a34a, #22c55e);
+      transition: width 0.15s ease;
+    }
+
+    .bar-xp {
+      height: 100%;
+      background: linear-gradient(90deg, #0284c7, #38bdf8);
+      transition: width 0.15s ease;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .status-hud {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .wanted-cash {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .stars {
+      color: #facc15;
+      letter-spacing: 1px;
+    }
+
+    .cash {
+      color: #4ade80;
+    }
+
+    .quick-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .chip-btn {
+      background: rgba(30, 41, 59, 0.9);
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 8px;
+      padding: 5px 9px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .chip-btn:hover {
+      border-color: var(--accent);
+    }
+
+    /* Barra de Líder / Squad */
+    #boss-hud {
+      position: fixed;
+      top: 104px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(340px, 88vw);
+      background: var(--panel);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      border-radius: 12px;
+      padding: 7px 12px;
+      display: none;
+      z-index: 19;
+      pointer-events: none;
+    }
+
+    .boss-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .bar-boss {
+      height: 8px;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-boss-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #dc2626, #f97316);
+      transition: width 0.15s ease;
+    }
+
+    /* Tarjeta de Misión */
+    #mission-card {
+      position: fixed;
+      top: 156px;
+      left: 10px;
+      width: min(260px, 72vw);
+      background: var(--panel);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 12px;
+      padding: 8px 11px;
+      font-size: 12px;
+      z-index: 18;
+      display: none;
+      pointer-events: none;
+    }
+
+    .mission-title {
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 3px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Toast / Notificación */
+    #toast {
+      position: fixed;
+      bottom: 130px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid rgba(250, 204, 21, 0.5);
+      color: #fef08a;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      z-index: 30;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    #toast.show {
+      opacity: 1;
+    }
+
+    /* Controles inferiores (táctiles y de acceso rápido) */
+    .hud-bottom {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 10px;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 44px);
+      grid-template-rows: repeat(3, 44px);
+      gap: 4px;
+      pointer-events: auto;
+    }
+
+    .dpad-btn {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .dpad-btn:active {
+      background: rgba(245, 158, 11, 0.35);
+    }
+
+    .dpad-center {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: rgba(245, 158, 11, 0.5);
+      font-size: 12px;
+    }
+
+    .right-cluster {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .attack-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .atk-btn {
+      background: var(--panel);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 12px;
+      padding: 9px 12px;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      min-width: 96px;
+    }
+
+    .atk-btn strong {
+      display: block;
+      font-size: 12px;
+    }
+
+    .atk-btn span {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .minimap-box {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 6px;
+    }
+
+    .minimap-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 4px;
+      gap: 8px;
+    }
+
+    #minimap {
+      display: block;
+      width: 118px;
+      height: 86px;
+      border-radius: 8px;
+      background: #0b1324;
+    }
+
+    /* Modal de Logros */
+    #achievements-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.82);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 45;
+    }
+
+    .modal-card {
+      background: #0f172a;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 16px;
+      padding: 18px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .ach-item {
+      padding: 10px;
+      border-radius: 10px;
+      background: rgba(30, 41, 59, 0.65);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ach-item.done {
+      border: 1px solid rgba(74, 222, 128, 0.45);
+      background: rgba(20, 83, 45, 0.35);
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <style>
+/* ===== PIXEL / GTA THEME ===== */
+*{font-family:'Press Start 2P','Courier New',monospace!important}
+:root{--panel:rgba(17,24,39,.94);--accent:#fbbf24;--muted:#9ca3af}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges}
+#game-wrap::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:5;background:repeating-linear-gradient(0deg,rgba(0,0,0,.1) 0 1px,transparent 1px 3px)}
+.hud-box,.minimap-box,.atk-btn,.chip-btn,.dpad-btn,#mission-card,#boss-hud,#toast,.starter-card,.modal-card,.ach-item,.btn-primary{border-radius:0!important;border:3px solid #000!important;box-shadow:3px 3px 0 rgba(0,0,0,.55);backdrop-filter:none!important}
+.hud-box{font-size:9px;padding:8px 9px}
+.player-header{font-size:10px}.stat-row{font-size:7px}.wanted-cash{font-size:10px}
+.chip-btn{font-size:8px;padding:6px 7px;background:#1f2937}
+.atk-btn{font-size:9px;background:#1f2937;min-width:104px}.atk-btn strong{font-size:9px;margin-bottom:4px}.atk-btn span{font-size:7px}
+.dpad-btn{background:#1f2937;font-size:14px}
+.bar-track,.bar-boss{border-radius:0!important;height:10px;border:2px solid #000}
+#mission-card{font-size:8px;line-height:1.6;top:170px}#boss-hud{font-size:8px;top:112px}
+#toast{font-size:9px;line-height:1.6;white-space:normal;max-width:90vw;text-align:center;border-radius:0;bottom:150px}
+.minimap-header{font-size:6px}#minimap{width:150px;height:109px;border:2px solid #000;border-radius:0;image-rendering:pixelated}
+#start-overlay{background:linear-gradient(180deg,#1e1b4b 0%,#7e22ce 32%,#f43f5e 58%,#fb923c 74%,#0b1020 74%)}
+#start-overlay::after{content:'';position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.12) 0 1px,transparent 1px 3px)}
+.title-badge{font-size:9px;color:#fde047}
+.logo{margin:0 0 10px;text-align:center;line-height:1;font-style:italic;font-size:clamp(34px,8vw,72px);color:#fde047;letter-spacing:2px;text-shadow:3px 3px 0 #b45309,6px 6px 0 #000}
+.logo,.logo *{font-family:Impact,'Arial Black',sans-serif!important;font-weight:900}
+.logo small{display:block;font-size:.3em;letter-spacing:.55em;color:#f8fafc;margin-top:6px;text-shadow:2px 2px 0 #000}
+.subtitle{font-size:8px;line-height:1.9;color:#fde7d3;max-width:640px;text-shadow:1px 1px 0 #000}
+.starter-card{background:rgba(17,24,39,.94)}.starter-card.selected{background:#78350f;outline:3px solid var(--accent)}
+.starter-name{font-size:11px}.starter-type{font-size:7px}.starter-desc{font-size:7px;line-height:1.7}
+.sp-row{display:flex;gap:5px;margin-bottom:8px}
+.sp-row canvas{width:44px;height:44px;image-rendering:pixelated;background:#0b1020;border:2px solid #000}
+.btn-primary{font-size:12px;background:#ea580c;border-radius:0}
+#banner{position:fixed;left:0;right:0;top:32%;text-align:center;font-style:italic;font-size:clamp(34px,8vw,84px);line-height:1;letter-spacing:3px;color:#fde047;text-shadow:3px 3px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000;opacity:0;transform:scale(1.5);transition:opacity .25s,transform .25s;pointer-events:none;z-index:35}
+#banner,#banner *{font-family:Impact,'Arial Black',sans-serif!important;font-weight:900}
+#banner.show{opacity:1;transform:scale(1)}
+
+#level-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,.84);z-index:60;padding:16px;overflow-y:auto}
+.lm-card{background:#111827;border:4px solid #000;box-shadow:6px 6px 0 #000,0 0 0 4px #fbbf24;padding:22px;max-width:480px;width:100%;text-align:center}
+.lm-t{font-family:Impact,'Arial Black',sans-serif!important;font-style:italic;font-size:clamp(34px,8vw,56px);line-height:1;color:#fde047;text-shadow:3px 3px 0 #b45309,5px 5px 0 #000;margin-bottom:12px}
+.lm-s{font-size:10px;margin-bottom:12px;line-height:1.6}.lm-lv{font-size:11px;color:#4ade80;margin-bottom:14px}.lm-lv b{color:#fff}
+.lm-row{font-size:8px;line-height:1.9;background:#1f2937;border:2px solid #000;padding:8px;margin-bottom:8px}.lm-row span{color:#fde047}
+
+#dlg{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(92vw,720px);display:none;z-index:40;background:#111827;border:4px solid #000;box-shadow:0 0 0 3px #fbbf24,5px 5px 0 3px #000;padding:14px 16px;cursor:pointer}
+#dlg .dn{font-size:10px;color:#fde047;margin-bottom:10px}#dlg .dt{font-size:10px;line-height:1.9;min-height:56px}
+#dlg .dh{font-size:7px;color:#9ca3af;text-align:right;margin-top:6px}#dlg .dq{display:flex;gap:10px;margin-top:8px}
+#dlg .dq button{font-size:9px;padding:8px 12px;background:#ea580c;color:#fff;border:3px solid #000;box-shadow:3px 3px 0 #000;cursor:pointer}
+#skills{position:fixed;right:10px;bottom:235px;display:none;flex-direction:column;gap:6px;z-index:12}
+.sk{font-size:8px;padding:8px 10px;background:#1f2937;color:#fff;border:3px solid #000;box-shadow:3px 3px 0 rgba(0,0,0,.5);cursor:pointer}
+#qhud{position:fixed;left:8px;top:128px;display:none;font-size:8px;line-height:1.8;white-space:pre;background:rgba(17,24,39,.92);border:3px solid #000;padding:6px 8px;z-index:12;color:#fde047}
+.btn-share{font-size:10px;padding:10px 12px;margin:2px 0 8px;width:100%;background:#2563eb;color:#fff;border:3px solid #000;box-shadow:3px 3px 0 #000;cursor:pointer}
+#lm-links{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:10px}
+#lm-links a{font-size:8px;padding:7px 9px;background:#1f2937;color:#fde047;border:2px solid #000;text-decoration:none}
+.reto{margin:6px 0 10px;padding:8px 12px;background:#7f1d1d;border:3px solid #000;font-size:9px;color:#fde047;text-align:center}
+</style>
+</head>
+<body>
+  <div id="game-wrap">
+    <canvas id="game"></canvas>
+
+    <!-- HUD Superior -->
+    <div class="hud-top">
+      <div class="hud-box player-hud">
+        <div class="player-header">
+          <span id="hud-name">BULBASAUR</span>
+          <span id="hud-lv">Nv.1</span>
+        </div>
+        <div class="bar-track"><div id="hud-hp-bar" class="bar-hp" style="width: 100%"></div></div>
+        <div class="stat-row">
+          <span>HP</span>
+          <span id="hud-hp-text">135/135</span>
+        </div>
+        <div class="bar-track" style="margin-top: 4px;"><div id="hud-xp-bar" class="bar-xp" style="width: 0%"></div></div>
+        <div class="stat-row">
+          <span>XP</span>
+          <span id="hud-evo-text">Evo Nv.4</span>
+        </div>
+      </div>
+
+      <div class="status-hud">
+        <div class="hud-box wanted-cash">
+          <span id="hud-stars" class="stars">☆☆☆☆☆</span>
+          <span id="hud-cash" class="cash">$150</span>
+        </div>
+        <div class="quick-actions">
+          <button class="chip-btn" id="btn-mission">Misión (M)</button>
+          <button class="chip-btn" id="btn-ach">🏆 <span id="hud-ach-count">0/6</span></button>
+          <button class="chip-btn" id="btn-audio" title="Música 8-bit">🔊</button>
+          <button class="chip-btn" id="btn-reset" title="Reiniciar">↻</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra de Líder / Squad -->
+    <div id="boss-hud">
+      <div class="boss-top">
+        <span id="boss-name">👑 LÍDER DE GIMNASIO</span>
+        <span id="boss-hp-text">250/250</span>
+      </div>
+      <div class="bar-boss">
+        <div id="boss-hp-bar" class="bar-boss-fill" style="width: 100%"></div>
+      </div>
+    </div>
+
+    <!-- Tarjeta de Misión -->
+    <div id="mission-card">
+      <div class="mission-title">
+        <span id="m-title">MISIÓN</span>
+        <span id="m-timer">60s</span>
+      </div>
+      <div id="m-desc" style="color: #cbd5e1; margin-bottom: 4px;"></div>
+      <div id="m-prog" style="color: #fbbf24; font-weight: 700;"></div>
+    </div>
+
+    <div id="toast"></div>
+
+    <!-- Controles Inferiores -->
+    <div class="hud-bottom">
+      <div class="dpad" aria-label="Controles de movimiento">
+        <div></div>
+        <button class="dpad-btn" data-dir="up">▲</button>
+        <div></div>
+        <button class="dpad-btn" data-dir="left">◀</button>
+        <button class="dpad-btn dpad-center" id="btn-interact" title="Interactuar / Bici (F)">F</button>
+        <button class="dpad-btn" data-dir="right">▶</button>
+        <div></div>
+        <button class="dpad-btn" data-dir="down">▼</button>
+        <div></div>
+      </div>
+
+      <div class="right-cluster">
+        <div class="attack-row">
+          <button class="atk-btn" id="btn-atk1">
+            <strong id="atk1-label">Ataque</strong>
+            <span>Clic / Espacio</span>
+          </button>
+          <button class="atk-btn" id="btn-atk2">
+            <strong id="atk2-label">Especial</strong>
+            <span id="atk2-cd">LISTO (E)</span>
+          </button>
+        </div>
+
+        <div class="minimap-box">
+          <div class="minimap-header">
+            <span>PUEBLO PALETA</span>
+            <span id="coords">0, 0</span>
+          </div>
+          <canvas id="minimap" width="118" height="86"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pantalla Inicial -->
+  <div id="start-overlay">
+    <div class="title-badge">Sandbox Retro • Mundo Abierto</div>
+    <h1 class="logo">POKÉ-CITY<small>SANDBOX</small></h1>
+    <p class="subtitle">Elige tu criatura y haz lo que quieras: roba autos, pelea contra el Líder y el Squad, sube de nivel y evoluciona, cumple misiones y sobrevive a la noche.<br><br>WASD mover · Clic/Espacio atacar · E especial · F subir/bajar de auto o bici · M misión</p>
+
+    <div class="starter-grid" id="starter-grid"></div>
+
+    <button class="btn-primary" id="btn-start">Comenzar Aventura</button>
+  </div>
+
+  <!-- Modal de Logros -->
+  <div id="achievements-modal">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="margin:0; font-size:18px;">🏆 Logros</h2>
+        <button class="chip-btn" id="btn-close-ach">Cerrar</button>
+      </div>
+      <div id="ach-list"></div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // MOTOR DE MÚSICA Y SONIDO CHIPTUNE (WEB AUDIO)
+    // ==========================================
+    const AudioEngine = (() => {
+      let ctx = null;
+      let enabled = true;
+      let timer = null;
+      let step = 0;
+
+      const townNotes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63, 293.66, 349.23];
+      const actionNotes = [220.00, 277.18, 329.63, 440.00, 392.00, 329.63, 293.66, 220.00];
+
+      function ensureCtx() {
+        if (!ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) ctx = new AudioCtx();
+        }
+        if (ctx && ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+        }
+      }
+
+      function playTone(freq, duration, type = 'square', volume = 0.03) {
+        if (!enabled) return;
+        ensureCtx();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(volume, now);
+        gain.gain.exponentialRampToValueAtTime(0.0008, now + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + duration);
+      }
+
+      function startMusic(isAction = false) {
+        stopMusic();
+        if (!enabled) return;
+        ensureCtx();
+        const tempoMs = isAction ? 170 : 250;
+        timer = setInterval(() => {
+          if (!enabled || !ctx || ctx.state !== 'running') return;
+          const seq = isAction ? actionNotes : townNotes;
+          const freq = seq[step % seq.length];
+          playTone(freq, tempoMs / 1100, isAction ? 'sawtooth' : 'triangle', isAction ? 0.022 : 0.025);
+          step++;
+        }, tempoMs);
+      }
+
+      function stopMusic() {
+        if (timer) {
+          clearInterval(timer);
+          timer = null;
+        }
+      }
+
+      function setEnabled(val) {
+        enabled = val;
+        if (!enabled) stopMusic();
+        else startMusic(state.wanted > 0 || !!state.activeMission);
+      }
+
+      return {
+        isEnabled: () => enabled,
+        setEnabled,
+        startMusic,
+        stopMusic,
+        sfxHit: () => playTone(160, 0.08, 'square', 0.035),
+        sfxSpecial: () => {
+          playTone(440, 0.09, 'sawtooth', 0.04);
+          setTimeout(() => playTone(660, 0.12, 'square', 0.04), 70);
+        },
+        sfxLevelUp: () => {
+          [523.25, 659.25, 783.99, 1046.5].forEach((f, idx) => {
+            setTimeout(() => playTone(f, 0.12, 'square', 0.04), idx * 85);
+          });
+        }
+      };
+    })();
+
+    // ==========================================
+    // DEFINICIONES DE POKÉMON Y EVOLUCIONES
+    // ==========================================
+    const STARTERS = [
+      {
+        id: 'bulbasaur',
+        name: 'Bulbasaur',
+        type: 'Planta / Veneno',
+        color: '#22c55e',
+        atk1: 'Hoja Afilada',
+        atk2: 'Frenesí Solar',
+        desc: 'Equilibrado, con ataque en área de esporas y hojas.',
+        evolutions: [
+          { lv: 1, name: 'BULBASAUR', color: '#22c55e', maxHp: 135, atk: 24, speed: 135 },
+          { lv: 4, name: 'IVYSAUR', color: '#16a34a', maxHp: 185, atk: 34, speed: 145 },
+          { lv: 8, name: 'VENUSAUR', color: '#15803d', maxHp: 250, atk: 46, speed: 155 }
+        ]
+      },
+      {
+        id: 'charmander',
+        name: 'Charmander',
+        type: 'Fuego',
+        color: '#f97316',
+        atk1: 'Ascuas',
+        atk2: 'Llamarada',
+        desc: 'Alto daño explosivo capaz de incendiar objetivos.',
+        evolutions: [
+          { lv: 1, name: 'CHARMANDER', color: '#f97316', maxHp: 125, atk: 28, speed: 145 },
+          { lv: 4, name: 'CHARMELEON', color: '#ea580c', maxHp: 170, atk: 39, speed: 158 },
+          { lv: 8, name: 'CHARIZARD', color: '#dc2626', maxHp: 235, atk: 54, speed: 172 }
+        ]
+      },
+      {
+        id: 'squirtle',
+        name: 'Squirtle',
+        type: 'Agua',
+        color: '#38bdf8',
+        atk1: 'Chorro Agua',
+        atk2: 'Hidrobomba',
+        desc: 'Gran empuje y resistencia contra escuadrones.',
+        evolutions: [
+          { lv: 1, name: 'SQUIRTLE', color: '#38bdf8', maxHp: 140, atk: 23, speed: 140 },
+          { lv: 4, name: 'WARTORTLE', color: '#0284c7', maxHp: 190, atk: 33, speed: 150 },
+          { lv: 8, name: 'BLASTOISE', color: '#1d4ed8', maxHp: 260, atk: 45, speed: 160 }
+        ]
+      },
+      {
+        id: 'pikachu',
+        name: 'Pikachu',
+        type: 'Eléctrico',
+        color: '#facc15',
+        atk1: 'Impactrueno',
+        atk2: 'Rayo Carga',
+        desc: 'Velocidad relámpago y ráfagas eléctricas rápidas.',
+        evolutions: [
+          { lv: 1, name: 'PIKACHU', color: '#facc15', maxHp: 118, atk: 27, speed: 165 },
+          { lv: 4, name: 'RAICHU', color: '#eab308', maxHp: 162, atk: 38, speed: 182 },
+          { lv: 8, name: 'VOLT-RAICHU', color: '#fde047', maxHp: 215, atk: 52, speed: 198 }
+        ]
+      }
+    ];
+
+    const ACHIEVEMENTS_DEF = [
+      { id: 'first_win', title: 'Primera Victoria', desc: 'Derrota a un rival o miembro del Squad.' },
+      { id: 'leader_down', title: 'Rey del Pueblo', desc: 'Derrota al Líder de Gimnasio.' },
+      { id: 'evo_1', title: 'Primera Evolución', desc: 'Alcanza el Nivel 4 para evolucionar.' },
+      { id: 'evo_2', title: 'Forma Final', desc: 'Alcanza el Nivel 8 para tu evolución final.' },
+      { id: 'mission_done', title: 'Cazarrecompensas', desc: 'Completa una misión activa.' },
+      { id: 'wanted_3', title: 'Enemigo Público', desc: 'Alcanza 3 estrellas de búsqueda.' }
+    ];
+
+    // ==========================================
+    // ESTADO DEL JUEGO Y MUNDO
+    // ==========================================
+    const WORLD_W = 1800;
+    const WORLD_H = 1350;
+
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const miniCanvas = document.getElementById('minimap');
+    const miniCtx = miniCanvas.getContext('2d');
+
+    let selectedStarter = STARTERS[0];
+    let lastActionMusicState = false;
+
+    const buildings = [
+      { id: 'pc', label: 'P.C.', x: 320, y: 240, w: 130, h: 95, color: '#ef4444', kind: 'heal' },
+      { id: 'gym', label: 'GYM', x: 1320, y: 240, w: 150, h: 105, color: '#8b5cf6', kind: 'gym' },
+      { id: 'shop', label: 'TIENDA', x: 340, y: 920, w: 135, h: 95, color: '#0ea5e9', kind: 'shop' },
+      { id: 'house1', label: 'CASA', x: 840, y: 260, w: 120, h: 85, color: '#d97706', kind: 'house' },
+      { id: 'house2', label: 'CASA', x: 1290, y: 900, w: 130, h: 90, color: '#d97706', kind: 'house' }
+    ];
+
+    const bikes = [
+      { x: 520, y: 360, mounted: false },
+      { x: 960, y: 680, mounted: false },
+      { x: 1220, y: 390, mounted: false }
+    ];
+
+    const state = {
+      running: false,
+      time: 0,
+      camera: { x: 0, y: 0 },
+      keys: {},
+      pointer: { x: 0, y: 0, active: false },
+      player: {
+        x: 720,
+        y: 540,
+        vx: 0,
+        vy: 0,
+        radius: 16,
+        lv: 1,
+        xp: 0,
+        xpToNext: 60,
+        hp: 135,
+        maxHp: 135,
+        atk: 24,
+        speed: 135,
+        onBike: false,
+        specialCd: 0,
+        invuln: 0
+      },
+      wanted: 0,
+      wantedDecay: 0,
+      cash: 150,
+      leader: {
+        name: '👑 LÍDER DRAKE',
+        x: 1395,
+        y: 385,
+        homeX: 1395,
+        homeY: 385,
+        radius: 20,
+        hp: 260,
+        maxHp: 260,
+        atk: 22,
+        speed: 118,
+        alive: true,
+        respawnTimer: 0,
+        atkTimer: 0,
+        color: '#a855f7'
+      },
+      squad: [],
+      projectiles: [],
+      particles: [],
+      floatingTexts: [],
+      activeMission: null,
+      missionCooldown: 0,
+      achievements: new Set(),
+      stats: { wins: 0, missionsCompleted: 0 }
+    };
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => el.classList.remove('show'), 2300);
+    }
+
+    function unlockAchievement(id) {
+      if (state.achievements.has(id)) return;
+      state.achievements.add(id);
+      const def = ACHIEVEMENTS_DEF.find(a => a.id === id);
+      if (def) {
+        state.cash += 75;
+        gainXp(25);
+        showToast(`🏆 Logro: ${def.title} (+$75)`);
+      }
+      renderAchievementsList();
+      updateHud();
+    }
+
+    function getCurrentEvo() {
+      const evos = selectedStarter.evolutions;
+      let current = evos[0];
+      for (const e of evos) {
+        if (state.player.lv >= e.lv) current = e;
+      }
+      return current;
+    }
+
+    function applyLevelStats(healFull = false) {
+      const evo = getCurrentEvo();
+      const lvBonusHp = (state.player.lv - 1) * 14;
+      const lvBonusAtk = (state.player.lv - 1) * 4;
+      const prevMax = state.player.maxHp;
+      state.player.maxHp = evo.maxHp + lvBonusHp;
+      state.player.atk = evo.atk + lvBonusAtk;
+      state.player.speed = evo.speed;
+      if (healFull) {
+        state.player.hp = state.player.maxHp;
+      } else {
+        state.player.hp = Math.min(state.player.maxHp, state.player.hp + Math.max(0, state.player.maxHp - prevMax));
+      }
+    }
+
+    function gainXp(amount) {
+      state.player.xp += amount;
+      while (state.player.xp >= state.player.xpToNext) {
+        state.player.xp -= state.player.xpToNext;
+        state.player.lv += 1;
+        state.player.xpToNext = Math.round(state.player.xpToNext * 1.32);
+        const prevName = getCurrentEvo().name;
+        applyLevelStats(true);
+        const newName = getCurrentEvo().name;
+        AudioEngine.sfxLevelUp();
+        if (newName !== prevName) {
+          showToast(`✨ ¡EVOLUCIONASTE A ${newName} (Nv.${state.player.lv})!`);
+          if (state.player.lv >= 4) unlockAchievement('evo_1');
+          if (state.player.lv >= 8) unlockAchievement('evo_2');
+        } else {
+          showToast(`⬆️ ¡Subiste al Nivel ${state.player.lv}!`);
+        }
+      }
+      updateHud();
+    }
+
+    function spawnSquadMember(x, y, lv = 2) {
+      state.squad.push({
+        name: 'SQUAD',
+        x,
+        y,
+        radius: 15,
+        hp: 65 + lv * 12,
+        maxHp: 65 + lv * 12,
+        atk: 11 + lv * 2,
+        speed: 112,
+        lv,
+        atkTimer: 0.6 + Math.random() * 0.8,
+        color: '#38bdf8'
+      });
+    }
+
+    function ensureSquadSize() {
+      const targetCount = state.wanted === 0 ? 0 : Math.min(6, state.wanted + 1);
+      while (state.squad.length < targetCount) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 340 + Math.random() * 180;
+        const sx = Math.max(80, Math.min(WORLD_W - 80, state.player.x + Math.cos(angle) * dist));
+        const sy = Math.max(80, Math.min(WORLD_H - 80, state.player.y + Math.sin(angle) * dist));
+        spawnSquadMember(sx, sy, Math.max(1, state.wanted + 1));
+      }
+    }
+
+    function addWanted(pts) {
+      state.wanted = Math.min(5, Math.max(state.wanted, Math.ceil((state.wanted * 20 + pts) / 20)));
+      state.wantedDecay = 12;
+      if (state.wanted >= 3) unlockAchievement('wanted_3');
+      ensureSquadSize();
+      updateHud();
+    }
+
+    function createMission() {
+      if (state.activeMission) {
+        showToast('Ya tienes una misión activa');
+        return;
+      }
+      const types = ['squad', 'leader', 'patrol'];
+      const pick = types[Math.floor(Math.random() * types.length)];
+      if (pick === 'leader' && state.leader.alive) {
+        state.activeMission = {
+          kind: 'leader',
+          title: 'RETO DEL LÍDER',
+          desc: 'Sigue la brújula y derrota al Líder del Gimnasio.',
+          target: 1,
+          progress: 0,
+          timeLeft: 75,
+          rewardCash: 180,
+          rewardXp: 70
+        };
+      } else if (pick === 'patrol') {
+        if (state.wanted < 2) addWanted(40);
+        ensureSquadSize();
+        state.activeMission = {
+          kind: 'squad',
+          title: 'CAZA DE SQUAD',
+          desc: 'Derrota a 3 unidades del Squad marcadas en el mapa.',
+          target: 3,
+          progress: 0,
+          timeLeft: 70,
+          rewardCash: 140,
+          rewardXp: 55
+        };
+      } else {
+        const tx = 450 + Math.random() * 950;
+        const ty = 350 + Math.random() * 650;
+        spawnSquadMember(tx, ty, 2);
+        spawnSquadMember(tx + 45, ty + 25, 2);
+        state.activeMission = {
+          kind: 'point_squad',
+          title: 'OPERATIVO CALLEJERO',
+          desc: 'Acude al punto marcado y derrota a 2 rivales.',
+          target: 2,
+          progress: 0,
+          timeLeft: 65,
+          targetX: tx,
+          targetY: ty,
+          rewardCash: 130,
+          rewardXp: 50
+        };
+      }
+      showToast(`📋 Nueva misión: ${state.activeMission.title}`);
+      updateHud();
+    }
+
+    function onEnemyDefeated(isLeader = false) {
+      state.stats.wins += 1;
+      unlockAchievement('first_win');
+      if (isLeader) {
+        unlockAchievement('leader_down');
+        state.cash += 160;
+        gainXp(65);
+        showToast('👑 ¡Líder derrotado! +$160 y +65 XP');
+      } else {
+        state.cash += 35;
+        gainXp(22);
+      }
+
+      if (state.activeMission) {
+        if (isLeader && state.activeMission.kind === 'leader') {
+          state.activeMission.progress += 1;
+        } else if (!isLeader && (state.activeMission.kind === 'squad' || state.activeMission.kind === 'point_squad')) {
+          state.activeMission.progress += 1;
+        }
+        if (state.activeMission.progress >= state.activeMission.target) {
+          const m = state.activeMission;
+          state.cash += m.rewardCash;
+          gainXp(m.rewardXp);
+          state.stats.missionsCompleted += 1;
+          state.activeMission = null;
+          unlockAchievement('mission_done');
+          showToast(`✅ ¡Misión completada! +$${m.rewardCash}`);
+        }
+      }
+      updateHud();
+    }
+
+    // ==========================================
+    // COMBATE Y ACCIONES
+    // ==========================================
+    function getAimAngle() {
+      if (state.pointer.active) {
+        const worldMouseX = state.pointer.x + state.camera.x;
+        const worldMouseY = state.pointer.y + state.camera.y;
+        return Math.atan2(worldMouseY - state.player.y, worldMouseX - state.player.x);
+      }
+      if (Math.hypot(state.player.vx, state.player.vy) > 5) {
+        return Math.atan2(state.player.vy, state.player.vx);
+      }
+      return 0;
+    }
+
+    function fireBasicAttack() {
+      if (!state.running) return;
+      const angle = getAimAngle();
+      const evo = getCurrentEvo();
+      AudioEngine.sfxHit();
+      state.projectiles.push({
+        fromPlayer: true,
+        x: state.player.x + Math.cos(angle) * 20,
+        y: state.player.y + Math.sin(angle) * 20,
+        vx: Math.cos(angle) * 430,
+        vy: Math.sin(angle) * 430,
+        radius: 7,
+        dmg: state.player.atk,
+        color: evo.color,
+        life: 0.75
+      });
+    }
+
+    function fireSpecialAttack() {
+      if (!state.running || state.player.specialCd > 0) return;
+      state.player.specialCd = 3.2;
+      AudioEngine.sfxSpecial();
+      const evo = getCurrentEvo();
+      const count = 8;
+      for (let i = 0; i < count; i++) {
+        const a = (Math.PI * 2 * i) / count;
+        state.projectiles.push({
+          fromPlayer: true,
+          x: state.player.x + Math.cos(a) * 18,
+          y: state.player.y + Math.sin(a) * 18,
+          vx: Math.cos(a) * 350,
+          vy: Math.sin(a) * 350,
+          radius: 9,
+          dmg: Math.round(state.player.atk * 1.45),
+          color: evo.color,
+          life: 0.65
+        });
+      }
+      showToast(`⚡ ¡${selectedStarter.atk2}!`);
+    }
+
+    function interactAction() {
+      if (!state.running) return;
+      if (state.player.onBike) {
+        state.player.onBike = false;
+        const freeBike = bikes[0];
+        freeBike.x = state.player.x + 24;
+        freeBike.y = state.player.y;
+        showToast('🚲 Bajaste de la bicicleta');
+        return;
+      }
+      for (const b of bikes) {
+        if (Math.hypot(b.x - state.player.x, b.y - state.player.y) < 42) {
+          state.player.onBike = true;
+          showToast('🚲 ¡Subiste a la bicicleta! (+Velocidad)');
+          return;
+        }
+      }
+      // Interacción cercana con Centro Pokémon
+      const pc = buildings[0];
+      if (Math.hypot(pc.x + pc.w / 2 - state.player.x, pc.y + pc.h / 2 - state.player.y) < 110) {
+        state.player.hp = state.player.maxHp;
+        state.wanted = 0;
+        state.squad = [];
+        showToast('🏥 ¡HP restaurado y búsqueda limpia en el P.C.!');
+        updateHud();
+        return;
+      }
+      showToast('Acércate a una 🚲 o al P.C. para interactuar');
+    }
+
+    // ==========================================
+    // ACTUALIZACIÓN DEL MUNDO
+    // ==========================================
+    function getPrimaryObjective() {
+      if (state.activeMission) {
+        if (state.activeMission.kind === 'leader' && state.leader.alive) {
+          return { x: state.leader.x, y: state.leader.y, label: '👑 LÍDER', color: '#facc15' };
+        }
+        if (state.activeMission.kind === 'point_squad') {
+          return { x: state.activeMission.targetX, y: state.activeMission.targetY, label: '🎯 OBJETIVO', color: '#fb923c' };
+        }
+        if (state.squad.length > 0) {
+          return { x: state.squad[0].x, y: state.squad[0].y, label: '🚨 SQUAD', color: '#f87171' };
+        }
+      }
+      if (state.leader.alive) {
+        return { x: state.leader.x, y: state.leader.y, label: '👑 LÍDER', color: '#facc15' };
+      }
+      const pc = buildings[0];
+      return { x: pc.x + pc.w / 2, y: pc.y + pc.h + 18, label: '🏥 P.C.', color: '#4ade80' };
+    }
+
+    function update(dt) {
+      if (!state.running) return;
+      state.time += dt;
+
+      // Música dinámica según acción o exploración
+      const isActionNow = state.wanted > 0 || !!state.activeMission || (state.leader.alive && Math.hypot(state.leader.x - state.player.x, state.leader.y - state.player.y) < 260);
+      if (isActionNow !== lastActionMusicState) {
+        lastActionMusicState = isActionNow;
+        AudioEngine.startMusic(isActionNow);
+      }
+
+      // Movimiento jugador
+      let mx = 0;
+      let my = 0;
+      if (state.keys['ArrowLeft'] || state.keys['KeyA'] || state.keys['dir_left']) mx -= 1;
+      if (state.keys['ArrowRight'] || state.keys['KeyD'] || state.keys['dir_right']) mx += 1;
+      if (state.keys['ArrowUp'] || state.keys['KeyW'] || state.keys['dir_up']) my -= 1;
+      if (state.keys['ArrowDown'] || state.keys['KeyS'] || state.keys['dir_down']) my += 1;
+
+      const len = Math.hypot(mx, my);
+      if (len > 0) {
+        mx /= len;
+        my /= len;
+      }
+
+      const spd = state.player.speed * (state.player.onBike ? 1.45 : 1);
+      state.player.vx = mx * spd;
+      state.player.vy = my * spd;
+      state.player.x = Math.max(28, Math.min(WORLD_W - 28, state.player.x + state.player.vx * dt));
+      state.player.y = Math.max(28, Math.min(WORLD_H - 28, state.player.y + state.player.vy * dt));
+
+      // Colisión suave con edificios
+      for (const b of buildings) {
+        const closestX = Math.max(b.x, Math.min(state.player.x, b.x + b.w));
+        const closestY = Math.max(b.y, Math.min(state.player.y, b.y + b.h));
+        const dx = state.player.x - closestX;
+        const dy = state.player.y - closestY;
+        const dist = Math.hypot(dx, dy);
+        if (dist < state.player.radius && dist > 0.001) {
+          const push = state.player.radius - dist;
+          state.player.x += (dx / dist) * push;
+          state.player.y += (dy / dist) * push;
+        }
+      }
+
+      // Curación automática suave cerca del Centro Pokémon
+      const pc = buildings[0];
+      if (Math.hypot(pc.x + pc.w / 2 - state.player.x, pc.y + pc.h + 24 - state.player.y) < 55) {
+        if (state.player.hp < state.player.maxHp) {
+          state.player.hp = Math.min(state.player.maxHp, state.player.hp + 35 * dt);
+        }
+      }
+
+      if (state.player.specialCd > 0) state.player.specialCd = Math.max(0, state.player.specialCd - dt);
+      if (state.player.invuln > 0) state.player.invuln = Math.max(0, state.player.invuln - dt);
+
+      // Enfriamiento de búsqueda
+      if (state.wanted > 0) {
+        state.wantedDecay -= dt;
+        if (state.wantedDecay <= 0) {
+          state.wanted = Math.max(0, state.wanted - 1);
+          state.wantedDecay = 10;
+          if (state.wanted === 0) state.squad = [];
+        }
+      }
+
+      // Temporizador de misión
+      if (state.activeMission) {
+        state.activeMission.timeLeft -= dt;
+        if (state.activeMission.timeLeft <= 0) {
+          state.activeMission = null;
+          showToast('⌛ Tiempo agotado para la misión');
+        }
+      }
+
+      // Actualizar Líder
+      if (state.leader.alive) {
+        const dx = state.player.x - state.leader.x;
+        const dy = state.player.y - state.leader.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 420 && dist > 36) {
+          state.leader.x += (dx / dist) * state.leader.speed * dt;
+          state.leader.y += (dy / dist) * state.leader.speed * dt;
+        } else if (dist >= 420) {
+          const hdx = state.leader.homeX - state.leader.x;
+          const hdy = state.leader.homeY - state.leader.y;
+          const hdist = Math.hypot(hdx, hdy);
+          if (hdist > 6) {
+            state.leader.x += (hdx / hdist) * (state.leader.speed * 0.7) * dt;
+            state.leader.y += (hdy / hdist) * (state.leader.speed * 0.7) * dt;
+          }
+        }
+        state.leader.atkTimer -= dt;
+        if (dist < 260 && state.leader.atkTimer <= 0) {
+          state.leader.atkTimer = 1.45;
+          const a = Math.atan2(dy, dx);
+          state.projectiles.push({
+            fromPlayer: false,
+            x: state.leader.x + Math.cos(a) * 18,
+            y: state.leader.y + Math.sin(a) * 18,
+            vx: Math.cos(a) * 255,
+            vy: Math.sin(a) * 255,
+            radius: 7,
+            dmg: state.leader.atk,
+            color: '#c084fc',
+            life: 1.2
+          });
+        }
+      } else {
+        state.leader.respawnTimer -= dt;
+        if (state.leader.respawnTimer <= 0) {
+          state.leader.alive = true;
+          state.leader.hp = state.leader.maxHp;
+          state.leader.x = state.leader.homeX;
+          state.leader.y = state.leader.homeY;
+          showToast('👑 ¡El Líder ha regresado al Gimnasio!');
+        }
+      }
+
+      // Actualizar Squad
+      for (let i = state.squad.length - 1; i >= 0; i--) {
+        const s = state.squad[i];
+        const dx = state.player.x - s.x;
+        const dy = state.player.y - s.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 45 && dist < 680) {
+          s.x += (dx / dist) * s.speed * dt;
+          s.y += (dy / dist) * s.speed * dt;
+        }
+        s.atkTimer -= dt;
+        if (dist < 220 && s.atkTimer <= 0) {
+          s.atkTimer = 1.5;
+          const a = Math.atan2(dy, dx);
+          state.projectiles.push({
+            fromPlayer: false,
+            x: s.x + Math.cos(a) * 14,
+            y: s.y + Math.sin(a) * 14,
+            vx: Math.cos(a) * 230,
+            vy: Math.sin(a) * 230,
+            radius: 6,
+            dmg: s.atk,
+            color: '#38bdf8',
+            life: 1.1
+          });
+        }
+      }
+
+      // Actualizar Proyectiles
+      for (let i = state.projectiles.length - 1; i >= 0; i--) {
+        const p = state.projectiles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        if (p.life <= 0) {
+          state.projectiles.splice(i, 1);
+          continue;
+        }
+
+        if (p.fromPlayer) {
+          let hit = false;
+          if (state.leader.alive && Math.hypot(p.x - state.leader.x, p.y - state.leader.y) < state.leader.radius + p.radius) {
+            state.leader.hp -= p.dmg;
+            hit = true;
+            addWanted(12);
+            state.floatingTexts.push({ x: state.leader.x, y: state.leader.y - 24, text: `-${p.dmg}`, color: '#fde047', life: 0.7 });
+            if (state.leader.hp <= 0) {
+              state.leader.alive = false;
+              state.leader.respawnTimer = 22;
+              onEnemyDefeated(true);
+            }
+          }
+          if (!hit) {
+            for (let j = state.squad.length - 1; j >= 0; j--) {
+              const s = state.squad[j];
+              if (Math.hypot(p.x - s.x, p.y - s.y) < s.radius + p.radius) {
+                s.hp -= p.dmg;
+                hit = true;
+                addWanted(15);
+                state.floatingTexts.push({ x: s.x, y: s.y - 20, text: `-${p.dmg}`, color: '#7dd3fc', life: 0.7 });
+                if (s.hp <= 0) {
+                  state.squad.splice(j, 1);
+                  onEnemyDefeated(false);
+                }
+                break;
+              }
+            }
+          }
+          if (hit) {
+            state.projectiles.splice(i, 1);
+          }
+        } else {
+          if (Math.hypot(p.x - state.player.x, p.y - state.player.y) < state.player.radius + p.radius) {
+            state.projectiles.splice(i, 1);
+            if (state.player.invuln <= 0) {
+              state.player.hp -= p.dmg;
+              state.player.invuln = 0.25;
+              state.floatingTexts.push({ x: state.player.x, y: state.player.y - 22, text: `-${p.dmg}`, color: '#f87171', life: 0.7 });
+              if (state.player.hp <= 0) {
+                state.player.hp = state.player.maxHp;
+                state.player.x = 720;
+                state.player.y = 540;
+                state.wanted = 0;
+                state.squad = [];
+                showToast('💫 ¡Te debilitaste! Regresaste al centro del pueblo');
+              }
+            }
+          }
+        }
+      }
+
+      // Textos flotantes
+      for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
+        const ft = state.floatingTexts[i];
+        ft.y -= 28 * dt;
+        ft.life -= dt;
+        if (ft.life <= 0) state.floatingTexts.splice(i, 1);
+      }
+
+      // Cámara centrada
+      state.camera.x = Math.max(0, Math.min(WORLD_W - canvas.width, state.player.x - canvas.width / 2));
+      state.camera.y = Math.max(0, Math.min(WORLD_H - canvas.height, state.player.y - canvas.height / 2));
+
+      updateHud();
+    }
+
+    // ==========================================
+    // RENDERIZADO Y BRÚJULA DIRECCIONAL
+    // ==========================================
+    function draw() {}
+
+    function drawMinimap() {
+      miniCtx.clearRect(0, 0, miniCanvas.width, miniCanvas.height);
+      miniCtx.fillStyle = (window.MINI_BG||'#14532d');
+      miniCtx.fillRect(0, 0, miniCanvas.width, miniCanvas.height);
+
+      const sx = miniCanvas.width / WORLD_W;
+      const sy = miniCanvas.height / WORLD_H;
+
+      // Calles
+      miniCtx.fillStyle = '#4b5563';
+      miniCtx.fillRect(0, 500 * sy, miniCanvas.width, 90 * sy);
+      miniCtx.fillRect(680 * sx, 0, 95 * sx, miniCanvas.height);
+
+      // Edificios
+      for (const b of buildings) {
+        miniCtx.fillStyle = b.color;
+        miniCtx.fillRect(b.x * sx, b.y * sy, Math.max(4, b.w * sx), Math.max(4, b.h * sy));
+      }
+
+      // Líder
+      if (state.leader.alive) {
+        miniCtx.fillStyle = '#facc15';
+        miniCtx.beginPath();
+        miniCtx.arc(state.leader.x * sx, state.leader.y * sy, 3.5, 0, Math.PI * 2);
+        miniCtx.fill();
+      }
+
+      // Squad
+      miniCtx.fillStyle = '#38bdf8';
+      for (const s of state.squad) {
+        miniCtx.fillRect(s.x * sx - 2, s.y * sy - 2, 4, 4);
+      }
+
+      // Jugador
+      miniCtx.fillStyle = '#ffffff';
+      miniCtx.beginPath();
+      miniCtx.arc(state.player.x * sx, state.player.y * sy, 3.5, 0, Math.PI * 2);
+      miniCtx.fill();
+    }
+
+    function updateHud() {
+      const evo = getCurrentEvo();
+      document.getElementById('hud-name').textContent = evo.name;
+      document.getElementById('hud-lv').textContent = `Nv.${state.player.lv}`;
+      document.getElementById('hud-hp-text').textContent = `${Math.max(0, Math.ceil(state.player.hp))}/${state.player.maxHp}`;
+      document.getElementById('hud-hp-bar').style.width = `${Math.max(0, Math.min(100, (state.player.hp / state.player.maxHp) * 100))}%`;
+      document.getElementById('hud-xp-bar').style.width = `${Math.max(0, Math.min(100, (state.player.xp / state.player.xpToNext) * 100))}%`;
+
+      const nextEvo = selectedStarter.evolutions.find(e => e.lv > state.player.lv);
+      document.getElementById('hud-evo-text').textContent = nextEvo ? `Evo Nv.${nextEvo.lv}` : 'MAX EVO';
+
+      const w = state.wanted;
+      document.getElementById('hud-stars').textContent = '★'.repeat(w) + '☆'.repeat(5 - w);
+      document.getElementById('hud-cash').textContent = `$${state.cash}`;
+      document.getElementById('hud-ach-count').textContent = `${state.achievements.size}/${ACHIEVEMENTS_DEF.length}`;
+      document.getElementById('hud-name').style.color = evo.color;
+      document.getElementById('coords').textContent = `${Math.round(state.player.x / 10)}, ${Math.round(state.player.y / 10)}`;
+
+      document.getElementById('atk1-label').textContent = selectedStarter.atk1;
+      document.getElementById('atk2-label').textContent = selectedStarter.atk2;
+      document.getElementById('atk2-cd').textContent = state.player.specialCd > 0 ? `${state.player.specialCd.toFixed(1)}s (E)` : 'LISTO (E)';
+
+      // Barra de Líder / Squad
+      const bossHud = document.getElementById('boss-hud');
+      const nearLeader = state.leader.alive && Math.hypot(state.leader.x - state.player.x, state.leader.y - state.player.y) < 360;
+      if (nearLeader) {
+        bossHud.style.display = 'block';
+        document.getElementById('boss-name').textContent = state.leader.name;
+        document.getElementById('boss-hp-text').textContent = `${Math.max(0, Math.ceil(state.leader.hp))}/${state.leader.maxHp}`;
+        document.getElementById('boss-hp-bar').style.width = `${Math.max(0, (state.leader.hp / state.leader.maxHp) * 100)}%`;
+      } else if (state.squad.length > 0) {
+        const totalHp = state.squad.reduce((acc, s) => acc + Math.max(0, s.hp), 0);
+        const totalMax = state.squad.reduce((acc, s) => acc + s.maxHp, 0);
+        bossHud.style.display = 'block';
+        document.getElementById('boss-name').textContent = `🚨 SQUAD (${state.squad.length})`;
+        document.getElementById('boss-hp-text').textContent = `${Math.ceil(totalHp)}/${totalMax}`;
+        document.getElementById('boss-hp-bar').style.width = `${Math.max(0, (totalHp / Math.max(1, totalMax)) * 100)}%`;
+      } else {
+        bossHud.style.display = 'none';
+      }
+
+      // Misión activa
+      const mCard = document.getElementById('mission-card');
+      if (state.activeMission) {
+        mCard.style.display = 'block';
+        document.getElementById('m-title').textContent = state.activeMission.title;
+        document.getElementById('m-timer').textContent = `${Math.ceil(state.activeMission.timeLeft)}s`;
+        document.getElementById('m-desc').textContent = state.activeMission.desc;
+        document.getElementById('m-prog').textContent = `Progreso: ${state.activeMission.progress}/${state.activeMission.target}`;
+      } else {
+        mCard.style.display = 'none';
+      }
+    }
+
+    // ==========================================
+    // UI INICIAL, CONTROLES Y BUCLE PRINCIPAL
+    // ==========================================
+    function renderStarterCards() {
+      const grid = document.getElementById('starter-grid');
+      grid.innerHTML = '';
+      for (const st of STARTERS) {
+        const card = document.createElement('div');
+        card.className = 'starter-card' + (st.id === selectedStarter.id ? ' selected' : '');
+        card.innerHTML = `
+          <div class="starter-name" style="color:${st.color}">${st.name}</div>
+          <div class="starter-type">${st.type}</div>
+          <div class="starter-desc">${st.desc}</div>
+        `;
+        card.onclick = () => {
+          selectedStarter = st;
+          renderStarterCards();
+        };
+        grid.appendChild(card);
+      }
+    }
+
+    function renderAchievementsList() {
+      const list = document.getElementById('ach-list');
+      list.innerHTML = '';
+      for (const a of ACHIEVEMENTS_DEF) {
+        const done = state.achievements.has(a.id);
+        const div = document.createElement('div');
+        div.className = 'ach-item' + (done ? ' done' : '');
+        div.innerHTML = `
+          <div>
+            <div style="font-weight:800; font-size:13px;">${a.title}</div>
+            <div style="font-size:12px; color:#cbd5e1;">${a.desc}</div>
+          </div>
+          <div style="font-size:12px; font-weight:800; color:${done ? '#4ade80' : '#94a3b8'};">${done ? 'DESBLOQUEADO' : 'PENDIENTE'}</div>
+        `;
+        list.appendChild(div);
+      }
+    }
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    renderStarterCards();
+    renderAchievementsList();
+
+    document.getElementById('btn-start').onclick = () => {
+      applyLevelStats(true);
+      state.running = true;
+      document.getElementById('start-overlay').style.display = 'none';
+      AudioEngine.startMusic(false);
+      showToast('¡Sigue la flecha de brújula para encontrar al Líder o pulsa Misión (M)!');
+      updateHud();
+    };
+
+    document.getElementById('btn-mission').onclick = createMission;
+    document.getElementById('btn-interact').onclick = interactAction;
+    document.getElementById('btn-atk1').onclick = fireBasicAttack;
+    document.getElementById('btn-atk2').onclick = fireSpecialAttack;
+    document.getElementById('btn-reset').onclick = () => {
+      state.player.lv = 1;
+      state.player.xp = 0;
+      state.player.xpToNext = 60;
+      state.player.x = 720;
+      state.player.y = 540;
+      state.wanted = 0;
+      state.squad = [];
+      state.activeMission = null;
+      state.leader.alive = true;
+      state.leader.hp = state.leader.maxHp;
+      state.leader.x = state.leader.homeX;
+      state.leader.y = state.leader.homeY;
+      applyLevelStats(true);
+      showToast('🔄 Mundo reiniciado');
+      updateHud();
+    };
+
+    document.getElementById('btn-audio').onclick = (e) => {
+      const next = !AudioEngine.isEnabled();
+      AudioEngine.setEnabled(next);
+      e.currentTarget.textContent = next ? '🔊' : '🔇';
+      showToast(next ? 'Música 8-bit activada' : 'Música silenciada');
+    };
+
+    document.getElementById('btn-ach').onclick = () => {
+      renderAchievementsList();
+      document.getElementById('achievements-modal').style.display = 'flex';
+    };
+    document.getElementById('btn-close-ach').onclick = () => {
+      document.getElementById('achievements-modal').style.display = 'none';
+    };
+
+    // Botones táctiles direccionales
+    document.querySelectorAll('.dpad-btn[data-dir]').forEach(btn => {
+      const code = 'dir_' + btn.dataset.dir;
+      const setPress = (val) => { state.keys[code] = val; };
+      btn.addEventListener('pointerdown', (e) => { e.preventDefault(); setPress(true); });
+      btn.addEventListener('pointerup', () => setPress(false));
+      btn.addEventListener('pointerleave', () => setPress(false));
+      btn.addEventListener('pointercancel', () => setPress(false));
+    });
+
+    // Teclado
+    window.addEventListener('keydown', (e) => {
+      state.keys[e.code] = true;
+      if (!state.running) return;
+      if (e.code === 'Space') { e.preventDefault(); fireBasicAttack(); }
+      if (e.code === 'KeyE') { e.preventDefault(); fireSpecialAttack(); }
+      if (e.code === 'KeyF') { e.preventDefault(); interactAction(); }
+      if (e.code === 'KeyM') { e.preventDefault(); createMission(); }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      state.keys[e.code] = false;
+    });
+
+    // Apuntar y disparar en canvas
+    canvas.addEventListener('pointermove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      state.pointer.x = e.clientX - rect.left;
+      state.pointer.y = e.clientY - rect.top;
+      state.pointer.active = true;
+    });
+
+    canvas.addEventListener('pointerdown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      state.pointer.x = e.clientX - rect.left;
+      state.pointer.y = e.clientY - rect.top;
+      state.pointer.active = true;
+      fireBasicAttack();
+    });
+
+    let lastTime = performance.now();
+    function loop(now) {
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+<script>
+(() => {
+// ============ PIXEL ENGINE: low-res canvas scaled up ============
+const TAU = Math.PI * 2, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function sizeCanvas() {
+  const PS = innerWidth < 700 ? 1 : 2;
+  canvas.width = Math.ceil(innerWidth / PS); canvas.height = Math.ceil(innerHeight / PS);
+  ctx.imageSmoothingEnabled = false;
+}
+addEventListener('resize', sizeCanvas); sizeCanvas();
+const fixPtr = e => { if (e.target !== canvas) return; const r = canvas.getBoundingClientRect(), pt = state.pointer, now = performance.now() / 1000;
+  pt.x = (e.clientX - r.left) * canvas.width / r.width; pt.y = (e.clientY - r.top) * canvas.height / r.height;
+  pt.mouse = e.pointerType === 'mouse'; pt.t = now; if (e.type === 'pointerdown') pt.tap = now; pt.active = true; };
+addEventListener('pointermove', fixPtr, true); addEventListener('pointerdown', fixPtr, true);
+
+const hx = h => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16));
+const mix = (h, t, a) => { const c = hx(h), k = hx(t); return '#' + c.map((v, i) => Math.round(v + (k[i] - v) * a).toString(16).padStart(2, '0')).join(''); };
+const lt = (h, a = .35) => mix(h, '#ffffff', a), dk = (h, a = .35) => mix(h, '#000000', a);
+const px = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+const txt = (s, x, y, c = '#fff') => { ctx.font = '8px "Press Start 2P",monospace'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#000'; for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) ctx.fillText(s, x + a, y + b); ctx.fillStyle = c; ctx.fillText(s, x, y); };
+const clean = s => s.replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF\uFE0F]/gu, '').trim();
+let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+
+// ============ SPRITES 16x16 (auto-outline) ============
+const cache = {};
+function mk(key, fn) {
+  if (cache[key]) return cache[key];
+  const g = [...Array(16)].map(() => Array(16).fill(null));
+  const P = (x, y, w, h, c) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (i >= 0 && i < 16 && j >= 0 && j < 16) g[j][i] = c; };
+  const M = (x, y, w, h, c) => { P(x, y, w, h, c); P(16 - x - w, y, w, h, c); };
+  fn(P, M);
+  const cv = document.createElement('canvas'); cv.width = cv.height = 16; const c = cv.getContext('2d');
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    if (g[y][x]) { c.fillStyle = g[y][x]; c.fillRect(x, y, 1, 1); }
+    else if ((g[y - 1] && g[y - 1][x]) || (g[y + 1] && g[y + 1][x]) || g[y][x - 1] || g[y][x + 1]) { c.fillStyle = '#0b0f1a'; c.fillRect(x, y, 1, 1); }
+  }
+  return cache[key] = cv;
+}
+const creature = (sp, st, col) => mk(sp + st + col, (P, M) => {
+  const b = col, l = lt(col, .4), d = dk(col, .3); let belly = l, eye = '#111';
+  if (sp === 'charmander') { belly = '#fde68a'; P(12, 11, 3, 2, b); P(14, 8, 2, 4, '#fb923c'); P(15, 8, 1, 3, '#fde047'); if (st > 1) { P(14, 5, 2, 3, '#fb923c'); M(0, 2, 3, 6, '#2563eb'); } }
+  if (sp === 'pikachu') { belly = st ? '#fde68a' : l; const y = '#facc15'; P(13, 11, 2, 1, y); P(14, 10, 2, 1, y); P(13, 9, 2, 1, y); P(14, 8, 2, 1, y); P(13, 7, 2, 1, y); }
+  if (sp === 'squirtle') { belly = '#fbbf24'; const t = st ? '#e0f2fe' : d; P(13, 10, 2, 3, t); P(14, 9, 1, 2, t); }
+  if (sp === 'bulbasaur') eye = '#dc2626';
+  M(3, 7, 5, 6, b); M(1, 8, 2, 3, b); M(3, 12, 3, 2, d); M(2, 2, 6, 6, b); M(5, 9, 3, 3, belly);
+  M(4, 5, 2, 2, eye); M(4, 5, 1, 1, '#fff'); P(7, 7, 2, 1, dk(col, .5));
+  if (sp === 'bulbasaur') { M(2, 1, 2, 2, d); M(3, 3, 1, 1, d); M(4, 8, 1, 1, d);
+    if (st == 0) { P(6, 0, 4, 2, '#16a34a'); P(7, 0, 2, 1, '#4ade80'); }
+    else if (st == 1) { P(6, 0, 4, 2, '#ec4899'); P(7, 0, 2, 1, '#fbcfe8'); }
+    else { P(3, 0, 10, 2, '#ec4899'); P(6, 0, 4, 1, '#fde047'); M(0, 3, 2, 3, '#166534'); } }
+  if (sp === 'charmander') { if (st == 1) P(7, 0, 2, 2, '#e5e7eb'); if (st > 1) M(3, 0, 1, 2, '#e5e7eb'); }
+  if (sp === 'squirtle') { P(5, 9, 6, 1, '#92400e'); P(7, 9, 2, 4, '#92400e'); if (st == 1) M(0, 3, 2, 4, l); if (st > 1) { M(1, 0, 2, 3, '#9ca3af'); M(1, 0, 1, 1, '#374151'); } }
+  if (sp === 'pikachu') { M(2, 0, 2, 3, st ? '#a16207' : b); M(2, 0, 2, 1, '#111'); M(2, 6, 2, 2, '#ef4444'); if (st > 1) { M(0, 5, 2, 1, '#fde047'); M(0, 7, 2, 1, '#fde047'); M(1, 3, 1, 1, '#fde047'); } }
+});
+const human = (cfg, f, k) => mk('h' + k + f, (P, M) => {
+  const { skin = '#f1c27d', hair = '#2b1b0e', shirt = '#3b82f6', pants = '#1f2937', hat, shades, crown, badge } = cfg;
+  const L1 = f ? 1 : 2, L2 = f ? 2 : 1;
+  P(5, 12, 2, L1, pants); P(9, 12, 2, L2, pants); P(5, 12 + L1, 2, 1, '#111'); P(9, 12 + L2, 2, 1, '#111');
+  M(4, 7, 4, 5, shirt); M(3, 8, 1, 3, shirt); M(3, 11, 1, 1, skin);
+  M(5, 2, 3, 5, skin); M(5, 1, 3, 2, hair);
+  if (hat) { M(4, 0, 4, 3, hat); P(5, 3, 6, 1, dk(hat, .3)); }
+  M(6, 4, 1, 1, '#111'); if (shades) P(5, 4, 6, 1, '#111');
+  if (crown) { P(5, 1, 6, 1, '#f59e0b'); P(5, 0, 1, 1, '#facc15'); P(7, 0, 2, 1, '#facc15'); P(10, 0, 1, 1, '#facc15'); }
+  if (badge) P(8, 8, 1, 1, '#facc15');
+});
+const stageOf = () => selectedStarter.evolutions.indexOf(getCurrentEvo());
+const blit = (cv, x, y, dy = 0, s = 32) => ctx.drawImage(cv, Math.round(x - s / 2), Math.round(y - s / 2 + dy), s, s);
+const shadow = (x, y, w) => { px(Math.round(x - w / 2), Math.round(y), w, 3, 'rgba(0,0,0,.3)'); px(Math.round(x - w / 2 + 2), Math.round(y) + 3, w - 4, 2, 'rgba(0,0,0,.3)'); };
+const bar = (x, y, w, f, c) => { x = Math.round(x); y = Math.round(y); px(x - w / 2 - 1, y - 1, w + 2, 4, '#000'); px(x - w / 2, y, w, 2, '#7f1d1d'); px(x - w / 2, y, Math.round(w * clamp(f, 0, 1)), 2, c); };
+
+// ============ WORLD DATA ============
+buildings.push(
+  { id: 'hotel', label: 'HOTEL', x: 1040, y: 640, w: 140, h: 100, color: '#be185d', kind: 'deco' },
+  { id: 'gas', label: 'GAS', x: 90, y: 650, w: 110, h: 80, color: '#15803d', kind: 'deco' },
+  { id: 'casino', label: 'CASINO', x: 1480, y: 650, w: 170, h: 120, color: '#ca8a04', kind: 'deco' },
+  { id: 'apart', label: 'APART.', x: 1000, y: 1040, w: 160, h: 140, color: '#64748b', kind: 'deco' });
+const pond = { x: 1420, y: 1040, w: 300, h: 250 };
+const rects = buildings.concat([pond]);
+const inRoad = (x, y, m) => (y > 500 - m && y < 590 + m) || (x > 680 - m && x < 775 + m);
+const nearRect = (x, y, m) => rects.some(b => x > b.x - m && x < b.x + b.w + m && y > b.y - m && y < b.y + b.h + m);
+const trees = [], flowers = [], lamps = [];
+for (let i = 0; i < 110 && trees.length < 90; i++) { const x = Math.round(rnd() * WORLD_W), y = Math.round(rnd() * WORLD_H);
+  if (inRoad(x, y, 40) || nearRect(x, y, 36) || Math.hypot(x - 720, y - 540) < 200) continue; trees.push({ x, y, t: rnd() < .55 ? 0 : 1 }); }
+for (let i = 0; i < 260; i++) { const x = Math.round(rnd() * WORLD_W), y = Math.round(rnd() * WORLD_H);
+  if (inRoad(x, y, 14) || nearRect(x, y, 4)) continue; flowers.push({ x, y, c: ['#f472b6', '#fde047', '#fff', '#a78bfa'][i % 4] }); }
+for (let x = 80; x < WORLD_W; x += 160) if (x < 630 || x > 830) { lamps.push({ x, y: 492 }); lamps.push({ x, y: 604 }); }
+for (let y = 80; y < WORLD_H; y += 160) if (y < 440 || y > 650) { lamps.push({ x: 668, y }); lamps.push({ x: 787, y }); }
+
+const mkPat = (sz, fn) => { const c = document.createElement('canvas'); c.width = c.height = sz; fn(c.getContext('2d')); return ctx.createPattern(c, 'repeat'); };
+let PAT = {
+  g: mkPat(64, c => { c.fillStyle = '#3d8a4e'; c.fillRect(0, 0, 64, 64); for (let i = 0; i < 90; i++) { c.fillStyle = ['#357c46', '#48a05a', '#2f6f40'][i % 3]; c.fillRect((rnd() * 64) | 0, (rnd() * 64) | 0, 2, 2); } for (let i = 0; i < 10; i++) { c.fillStyle = '#2f6f40'; c.fillRect((rnd() * 64) | 0, (rnd() * 64) | 0, 1, 3); } }),
+  a: mkPat(32, c => { c.fillStyle = '#3f4652'; c.fillRect(0, 0, 32, 32); for (let i = 0; i < 40; i++) { c.fillStyle = ['#383e49', '#474f5c', '#4d5563'][i % 3]; c.fillRect((rnd() * 32) | 0, (rnd() * 32) | 0, 1, 1); } }),
+  s: mkPat(16, c => { c.fillStyle = '#b4b9c2'; c.fillRect(0, 0, 16, 16); c.fillStyle = '#979da8'; c.fillRect(15, 0, 1, 16); c.fillRect(0, 15, 16, 1); })
+};
+
+// ============ VEHICLES & PEDESTRIANS ============
+let drive = null, ridden = null, shake = 0, flash = 0, wcd = 0, alertT = 0;
+const cars = [], peds = [], bikeQ = [], bikes0 = bikes.map(b => ({ ...b }));
+const CARCOL = ['#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#a855f7', '#e5e7eb', '#14b8a6', '#ec4899'];
+const mkCar = (x, y, a, col, kind, bv = 0) => { const c = { x, y, a, v: kind === 'ai' ? bv : 0, bv, col, hp: 100, kind, dead: false, rt: 0 }; c.home = { x, y, a, kind, v: c.v }; cars.push(c); return c; };
+const SHIRTS = ['#ef4444', '#3b82f6', '#a855f7', '#f59e0b', '#10b981', '#ec4899', '#e5e7eb', '#14b8a6'];
+const SKINS = ['#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'];
+const HAIRS = ['#2b1b0e', '#111', '#a16207', '#7c2d12', '#e5e7eb'];
+function newPed(far) {
+  let x, y, n = 0;
+  do { x = 80 + Math.random() * (WORLD_W - 160); y = 80 + Math.random() * (WORLD_H - 160); n++; }
+  while (n < 40 && (nearRect(x, y, 22) || (far && Math.hypot(x - state.player.x, y - state.player.y) < 360)));
+  const r = a => a[(Math.random() * a.length) | 0], cfg = { skin: r(SKINS), hair: r(HAIRS), shirt: r(SHIRTS), pants: r(['#1f2937', '#1e3a8a', '#44403c', '#374151']) };
+  if (Math.random() < .3) cfg.hat = r(SHIRTS);
+  return { x, y, tx: x, ty: y, t: 0, cfg, k: JSON.stringify(cfg), dead: false, dt: 0 };
+}
+function spawnWorld() {
+  cars.length = 0; peds.length = 0; drive = null; ridden = null; bikeQ.length = 0; bikes.length = 0; bikes0.forEach(b => bikes.push({ ...b, hx: b.x, hy: b.y }));
+  mkCar(600, 628, 0, '#ef4444', 'parked'); mkCar(820, 470, Math.PI, '#facc15', 'parked'); mkCar(640, 300, -Math.PI / 2, '#22c55e', 'parked');
+  [[200, 567, 0, 85], [1200, 567, 0, 95], [500, 523, Math.PI, 80], [1500, 523, Math.PI, 90],
+   [705, 250, Math.PI / 2, 88], [705, 900, Math.PI / 2, 78], [750, 500, -Math.PI / 2, 84], [750, 1100, -Math.PI / 2, 92]]
+    .forEach((d, i) => mkCar(d[0], d[1], d[2], CARCOL[i % 8], 'ai', d[3]));
+  for (let i = 0; i < 18; i++) peds.push(newPed(false));
+}
+spawnWorld();
+const spark = (x, y, n, col) => { for (let i = 0; i < n && state.particles.length < 400; i++) state.particles.push({ x, y, vx: (Math.random() - .5) * 190, vy: (Math.random() - .5) * 190, life: .3 + Math.random() * .5, c: col, s: 2 + ((Math.random() * 2) | 0) }); };
+const heat = (p, why) => { if (wcd <= 0) { addWanted(p); wcd = 3; if (why) showToast('🚨 ' + why + ' ¡Sube tu búsqueda!'); } };
+function collide(e, r) {
+  let hit = false;
+  for (const b of rects) { const cx = clamp(e.x, b.x, b.x + b.w), cy = clamp(e.y, b.y, b.y + b.h); let dx = e.x - cx, dy = e.y - cy, d = Math.hypot(dx, dy);
+    if (d < r) { if (d < .001) { dx = 1; dy = 0; d = 1; } const p = r - d; e.x += dx / d * p; e.y += dy / d * p; hit = true; } }
+  for (const t of trees) { const dx = e.x - t.x, dy = e.y - t.y, d = Math.hypot(dx, dy); if (d < r + 5 && d > .001) { const p = r + 5 - d; e.x += dx / d * p; e.y += dy / d * p; hit = true; } }
+  return hit;
+}
+function explode(c) {
+  c.dead = true; c.rt = 14; shake = .35; AudioEngine.sfxSpecial();
+  spark(c.x, c.y, 26, '#f97316'); spark(c.x, c.y, 16, '#fde047'); spark(c.x, c.y, 12, '#374151');
+  for (const p of peds) if (!p.dead && Math.hypot(p.x - c.x, p.y - c.y) < 50) koPed(p, true);
+  if (drive === c) { drive = null; state.player.hp = Math.max(1, state.player.hp - 30); showToast('💥 ¡Tu auto explotó!'); }
+  else if (!drive && Math.hypot(state.player.x - c.x, state.player.y - c.y) < 50) state.player.hp = Math.max(1, state.player.hp - 20);
+}
+function koPed(p, quiet) {
+  p.dead = true; p.dt = 0; const n = 8 + ((Math.random() * 30) | 0); state.cash += n;
+  state.floatingTexts.push({ x: p.x, y: p.y - 14, text: '+$' + n, color: '#4ade80', life: .9 }); spark(p.x, p.y, 7, '#e5e7eb'); AudioEngine.sfxHit(); if (!quiet) heat(6, '¡Golpeaste a un civil!');
+}
+function nearCar() { let best = null, bd = 46; for (const c of cars) if (!c.dead) { const d = Math.hypot(c.x - state.player.x, c.y - state.player.y); if (d < bd) { bd = d; best = c; } } return best; }
+function driveCar(c, dt) {
+  const k = state.keys, up = k.ArrowUp || k.KeyW || k.dir_up, dn = k.ArrowDown || k.KeyS || k.dir_down, lf = k.ArrowLeft || k.KeyA || k.dir_left, rt = k.ArrowRight || k.KeyD || k.dir_right;
+  if (up) c.v += 230 * dt; else if (dn) c.v -= (c.v > 0 ? 340 : 160) * dt; else c.v *= Math.pow(.3, dt);
+  c.v = clamp(c.v, -100, 270); c.a += ((rt ? 1 : 0) - (lf ? 1 : 0)) * 2.7 * dt * clamp(c.v / 80, -1, 1); moveCar(c, dt);
+}
+function moveCar(c, dt) {
+  c.x = clamp(c.x + Math.cos(c.a) * c.v * dt, 28, WORLD_W - 28); c.y = clamp(c.y + Math.sin(c.a) * c.v * dt, 28, WORLD_H - 28);
+  if (collide(c, 15)) { const s = Math.abs(c.v); if (s > 90) { c.hp -= s / 9; AudioEngine.sfxHit(); spark(c.x, c.y, 6, '#fde68a'); shake = .15; } c.v *= -.25; }
+}
+
+// ============ UPDATE HOOK ============
+const _upd = update, _inter = interactAction;
+update = function (dt) {
+  if (!state.running || talking) return;
+  if (drive) { driveCar(drive, dt); state.player.x = drive.x; state.player.y = drive.y; }
+  const sk = state.keys; if (drive) state.keys = {};
+  const frz = []; for (const e of state.squad.concat([state.leader])) if (e.stun > 0 || e.idle) { frz.push([e, e.speed]); e.speed = 0; e.atkTimer = Math.max(e.atkTimer, .5); }
+  _upd(dt); state.keys = sk; for (const [e, sp] of frz) e.speed = sp;
+  if (drive) { state.player.x = drive.x; state.player.y = drive.y; state.player.vx = Math.cos(drive.a) * drive.v; state.player.vy = Math.sin(drive.a) * drive.v; }
+  else if (!inside) collide(state.player, 16);
+  world(dt); if (inside) roomStep(); else questStep(dt);
+  const p = (0.4 + state.time / 240) % 1, h = Math.floor(p * 24), m = Math.floor((p * 24 - h) * 60);
+  document.getElementById('coords').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+function world(dt) {
+  for (let i = bikeQ.length - 1; i >= 0; i--) { bikeQ[i].t -= dt; if (bikeQ[i].t <= 0) { bikes.push(bikeQ[i].b); bikeQ.splice(i, 1); } }
+  wcd -= dt; shake = Math.max(0, shake - dt); flash = Math.max(0, flash - dt * 1.6);
+  if (state.projectiles.some(p => p.fromPlayer)) alertT = 4; else alertT = Math.max(0, alertT - dt);
+  const P = state.player;
+  if (Math.hypot(P.vx, P.vy) > 5) face = Math.atan2(P.vy, P.vx);
+  for (const e of state.squad.concat([state.leader])) { if (e.stun > 0) e.stun -= dt; if (e.hitCd > 0) e.hitCd -= dt; }
+  if (drive && Math.abs(drive.v) > 70) {
+    const D = drive, sp = Math.abs(D.v);
+    const hitE = (e, isL) => {
+      const dx = e.x - D.x, dy = e.y - D.y, d = Math.hypot(dx, dy) || 1; if (d > (isL ? 30 : 26) || e.hitCd > 0) return false;
+      e.hitCd = .6; e.stun = isL ? 1.6 : 3; const dmg = Math.round(sp * (isL ? .9 : .8)); e.hp -= dmg;
+      e.x = clamp(e.x + dx / d * 34, 30, WORLD_W - 30); e.y = clamp(e.y + dy / d * 34, 30, WORLD_H - 30);
+      state.floatingTexts.push({ x: e.x, y: e.y - 22, text: '-' + dmg, color: '#fde047', life: .8 });
+      spark(e.x, e.y, 10, '#fde047'); shake = .25; AudioEngine.sfxHit(); D.v *= .7; D.hp -= sp * .03; heat(12); return true;
+    };
+    for (let i = state.squad.length - 1; i >= 0; i--) { const s = state.squad[i]; if (hitE(s, false) && s.hp <= 0) { state.squad.splice(i, 1); onEnemyDefeated(false); } }
+    const LD = state.leader; if (LD.alive && hitE(LD, true) && LD.hp <= 0) { LD.alive = false; LD.respawnTimer = 22; onEnemyDefeated(true); }
+  }
+  // cars
+  for (const c of cars) {
+    if (c.dead) { c.rt -= dt; if (c.rt <= 0) { Object.assign(c, c.home, { hp: 100, dead: false }); } continue; }
+    if (c.kind === 'ai') {
+      const ca = Math.cos(c.a), sa = Math.sin(c.a); let go = true;
+      const chk = (ox, oy, w) => { const dx = ox - c.x, dy = oy - c.y, al = dx * ca + dy * sa, sd = -dx * sa + dy * ca; return al > 0 && al < w && Math.abs(sd) < 20; };
+      if (!drive && chk(P.x, P.y, 70)) go = false;
+      for (const d of peds) if (!d.dead && chk(d.x, d.y, 60)) go = false;
+      for (const o of cars) if (o !== c && !o.dead && (o.kind !== 'ai' || Math.cos(c.a - o.a) > .8) && chk(o.x, o.y, 64)) go = false;
+      c.v += ((go ? c.bv : 0) - c.v) * Math.min(1, dt * 3); c.x += ca * c.v * dt; c.y += sa * c.v * dt;
+      if (c.x > WORLD_W + 30) c.x = -30; if (c.x < -30) c.x = WORLD_W + 30; if (c.y > WORLD_H + 30) c.y = -30; if (c.y < -30) c.y = WORLD_H + 30;
+      if (!drive && c.v > 30 && P.invuln <= 0 && Math.hypot(P.x - c.x, P.y - c.y) < 22) { P.hp -= 14; P.invuln = .7; shake = .15; AudioEngine.sfxHit(); state.floatingTexts.push({ x: P.x, y: P.y - 22, text: '-14', color: '#f87171', life: .7 }); }
+    } else if (c.kind === 'parked' && Math.abs(c.v) > 2) { c.v *= Math.pow(.05, dt); moveCar(c, dt); } else if (c.kind === 'parked') c.v = 0;
+    if (c.kind !== 'parked' && Math.abs(c.v) > 50) for (const d of peds) if (!d.dead && Math.hypot(d.x - c.x, d.y - c.y) < 18) koPed(d);
+    if (c.kind === 'player') for (const o of cars) if (o !== c && !o.dead && Math.abs(c.v) > 60 && Math.hypot(o.x - c.x, o.y - c.y) < 26) {
+      o.hp -= Math.abs(c.v) * .55; c.hp -= Math.abs(c.v) * .08; c.v *= -.3; shake = .2; AudioEngine.sfxHit(); spark(o.x, o.y, 8, '#fde68a'); heat(10, '¡Chocaste otro auto!'); if (o.hp <= 0) explode(o); }
+    if (c.hp <= 0) explode(c);
+  }
+  // pedestrians
+  for (const p of peds) {
+    if (p.dead) { p.dt += dt; if (p.dt > 5) Object.assign(p, newPed(true)); continue; }
+    p.t -= dt; const scared = alertT > 0 && Math.hypot(p.x - P.x, p.y - P.y) < 220;
+    if (p.t <= 0 || scared) { p.t = scared ? .5 : 2 + Math.random() * 3; if (scared) { p.tx = p.x + (p.x - P.x) * 2; p.ty = p.y + (p.y - P.y) * 2; } else { const a = Math.random() * TAU; p.tx = p.x + Math.cos(a) * 70; p.ty = p.y + Math.sin(a) * 70; if (Math.random() < .3) p.tx = p.x; } }
+    const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy); p.mv = d > 3;
+    if (p.mv) { const sp = scared ? 85 : 28; p.x = clamp(p.x + dx / d * sp * dt, 30, WORLD_W - 30); p.y = clamp(p.y + dy / d * sp * dt, 30, WORLD_H - 30); }
+    collide(p, 8);
+  }
+  // player projectiles vs peds & cars
+  for (let i = state.projectiles.length - 1; i >= 0; i--) {
+    const p = state.projectiles[i]; if (!p.fromPlayer) continue; let hit = false;
+    for (const d of peds) if (!d.dead && Math.hypot(p.x - d.x, p.y - d.y) < 12) { koPed(d); hit = true; break; }
+    if (!hit) for (const c of cars) if (!c.dead && c.kind !== 'player' && Math.hypot(p.x - c.x, p.y - c.y) < 17) { c.hp -= p.dmg * 1.2; spark(p.x, p.y, 5, p.color); hit = true; if (c.hp <= 0) { explode(c); heat(12, '¡Destruiste un auto!'); } break; }
+    if (hit) state.projectiles.splice(i, 1);
+    else if (state.particles.length < 300) state.particles.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: .2, c: p.color, s: 3 });
+  }
+  for (let i = state.particles.length - 1; i >= 0; i--) { const q = state.particles[i]; q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= .94; q.vy *= .94; q.life -= dt; if (q.life <= 0) state.particles.splice(i, 1); }
+}
+interactAction = function () {
+  if (!state.running) return; const P = state.player;
+  if (talking) return advance();
+  if (inside) return roomInteract();
+  if (!drive) { const n = nearNpc(); if (n) return n.talk(); const bd = nearDoor(); if (bd) return enterB(bd); }
+  if (drive) { const c = drive; drive = null; c.kind = 'parked'; P.x = c.x + Math.cos(c.a + Math.PI / 2) * 30; P.y = c.y + Math.sin(c.a + Math.PI / 2) * 30; collide(P, 16); showToast('🚗 Bajaste del auto'); return; }
+  if (P.onBike) { P.onBike = false; if (ridden) { ridden.x = P.x + 24; ridden.y = P.y; } showToast('🚲 Bajaste de la bicicleta'); return; }
+  const c = nearCar();
+  if (c) {
+    if (c.kind === 'ai') { const d = newPed(false); d.x = c.x + 26; d.y = c.y; d.tx = d.x + 90; d.ty = d.y + 60; d.t = 3; peds.push(d); c.v = 0; heat(14); showToast('🚨 ¡Robaste un auto! Los policías te buscan'); }
+    else showToast('🚗 ¡Subiste al auto! (W/S acelerar, A/D girar)');
+    c.kind = 'player'; drive = c; return;
+  }
+  let nb = null, nd = 42; for (const b of bikes) { const d = Math.hypot(b.x - P.x, b.y - P.y); if (d < nd) { nd = d; nb = b; } }
+  if (nb) { P.onBike = true; ridden = nb; showToast('🚲 ¡Subiste a la bicicleta! (+Velocidad)'); return; }
+  _inter();
+};
+document.getElementById('btn-interact').onclick = interactAction;
+const _toast = showToast, BAN = [[/Misión completada/, 'MISIÓN CUMPLIDA', '#fde047'], [/debilitaste/, '¡DEBILITADO!', '#ef4444'], [/Líder derrotado/, '¡LÍDER DERROTADO!', '#a78bfa'], [/EVOLUCIONASTE/, '¡EVOLUCIÓN!', '#38bdf8']];
+const bn = document.createElement('div'); bn.id = 'banner'; document.body.appendChild(bn);
+showToast = function (m) {
+  _toast(m);
+  for (const [re, t, c] of BAN) if (re.test(m)) { bn.textContent = t; bn.style.color = c; bn.classList.add('show'); clearTimeout(bn._t); bn._t = setTimeout(() => bn.classList.remove('show'), 1900); if (t === '¡EVOLUCIÓN!') flash = 1; }
+  if (/debilitaste/.test(m)) { if (drive) { drive.kind = 'parked'; drive = null; } leaveRoom(true); if (state.player.onBike) { state.player.onBike = false; if (ridden) { ridden.x = ridden.hx; ridden.y = ridden.hy; bikeQ.push({ b: ridden, t: 40 }); bikes.splice(bikes.indexOf(ridden), 1); ridden = null; } setTimeout(() => showToast('🚲 Perdiste tu bicicleta'), 1800); } }
+};
+const _rst = document.getElementById('btn-reset').onclick;
+document.getElementById('btn-reset').onclick = e => { _rst(e); gymLevel = 1; modalOpen = false; lm.style.display = 'none'; inside = null; challenge = false; applyLevel(); spawnWorld(); state.time = 0; };
+
+// ============ RENDER HELPERS ============
+function tree(t) {
+  const x = t.x, y = t.y; if (theme.tree === 'c') return cactus(x, y); px(x - 8, y - 2, 16, 4, 'rgba(0,0,0,.25)'); px(x - 1, y - 5, 3, 7, '#6b4423');
+  if (t.t) { px(x - 9, y - 19, 18, 13, '#15803d'); px(x - 6, y - 22, 12, 3, '#15803d'); px(x - 9, y - 8, 18, 2, '#166534'); px(x - 5, y - 18, 5, 3, '#4ade80'); }
+  else { px(x - 3, y - 26, 6, 5, '#166534'); px(x - 6, y - 21, 12, 6, '#15803d'); px(x - 9, y - 15, 18, 8, '#166534'); px(x - 2, y - 24, 2, 2, '#4ade80'); px(x - 5, y - 19, 2, 2, '#4ade80');
+    if (theme.tree === 's') { px(x - 3, y - 26, 6, 2, '#fff'); px(x - 6, y - 21, 12, 2, '#fff'); px(x - 9, y - 15, 18, 2, '#fff'); } }
+}
+const wins = b => { const a = [], wy = b.y + b.h - 20; for (let wx = b.x + 8; wx < b.x + b.w - 16; wx += 22) if (Math.abs(wx + 5 - (b.x + b.w / 2)) > 14) a.push([wx, wy]); return a; };
+function bld(b) {
+  const { x, y, w, h, color } = b, wh = 26, rh = h - wh, cx = x + w / 2, cy = y + rh / 2;
+  px(x + 5, y + h - 2, w, 8, 'rgba(0,0,0,.3)'); px(x - 2, y - 2, w + 4, h + 4, '#0b0f1a');
+  px(x, y, w, rh, color); px(x, y, w, 3, lt(color, .35)); px(x, y + rh - 3, w, 3, dk(color, .25));
+  for (let i = 8; i < rh - 3; i += 8) px(x, y + i, w, 1, dk(color, .16));
+  px(x, y + rh, w, wh, mix(color, '#ffffff', .6));
+  if (b.kind === 'heal') { px(x + 12, cy - 8, 6, 16, '#fff'); px(x + 7, cy - 3, 16, 6, '#fff'); }
+  if (b.kind === 'gym') { px(x + w - 22, cy - 6, 10, 8, '#fde047'); px(x + w - 19, cy + 2, 4, 5, '#fde047'); px(x + w - 22, cy - 6, 10, 2, '#fff'); }
+  if (b.kind === 'deco') { px(x + 8, y + 8, 14, 10, '#9ca3af'); px(x + 10, y + 10, 10, 6, '#6b7280'); px(x + w - 24, y + 8, 14, 10, '#9ca3af'); }
+  if (b.kind === 'shop') for (let i = 0; i < w; i += 10) px(x + i, y + rh, 10, 6, (i / 10) % 2 ? '#fff' : '#dc2626');
+  for (const [wx, wy] of wins(b)) { px(wx - 1, wy - 1, 12, 10, '#0b0f1a'); px(wx, wy, 10, 8, '#7dd3fc'); px(wx, wy, 10, 2, '#e0f2fe'); }
+  px(cx - 7, y + h - 18, 14, 18, '#0b0f1a'); px(cx - 6, y + h - 17, 12, 17, '#5b3a1e'); px(cx + 3, y + h - 9, 2, 2, '#fde047');
+  txt(b.label, Math.round(cx), Math.round(cy + 4));
+}
+function withCar(c, fn) {
+  const ca = Math.cos(c.a), sa = Math.sin(c.a); ctx.save(); ctx.translate(Math.round(c.x), Math.round(c.y));
+  if (Math.abs(ca) >= Math.abs(sa)) { if (ca < 0) ctx.scale(-1, 1); } else ctx.rotate(sa > 0 ? Math.PI / 2 : -Math.PI / 2);
+  fn(); ctx.restore();
+}
+function dcar(c) {
+  withCar(c, () => {
+    px(-16, -7, 36, 20, 'rgba(0,0,0,.25)'); px(-18, -10, 36, 20, '#0b0f1a'); px(-17, -9, 34, 18, c.col); px(-17, -9, 34, 3, lt(c.col, .3));
+    px(-9, -7, 16, 14, dk(c.col, .15)); px(-8, -6, 14, 12, lt(c.col, .25)); px(6, -6, 3, 12, '#9fd8ff'); px(-11, -6, 3, 12, '#7fb8e0');
+    px(-14, -12, 7, 3, '#111'); px(8, -12, 7, 3, '#111'); px(-14, 9, 7, 3, '#111'); px(8, 9, 7, 3, '#111');
+    px(15, -8, 3, 4, '#fde047'); px(15, 4, 3, 4, '#fde047'); px(-18, -8, 2, 4, '#dc2626'); px(-18, 4, 2, 4, '#dc2626');
+    if (c.hp < 45) { px(-4, -2, 4, 4, '#374151'); px(2, 1, 3, 3, '#6b7280'); }
+  });
+}
+function dbike(x, y) { x = Math.round(x); y = Math.round(y); shadow(x, y + 8, 22); px(x - 11, y + 1, 8, 8, '#111'); px(x - 9, y + 3, 4, 4, '#9ca3af'); px(x + 4, y + 1, 8, 8, '#111'); px(x + 6, y + 3, 4, 4, '#9ca3af'); px(x - 7, y - 1, 16, 3, '#facc15'); px(x + 5, y - 5, 3, 6, '#facc15'); px(x + 3, y - 6, 8, 2, '#374151'); px(x - 5, y - 4, 5, 2, '#374151'); }
+function dped(p) {
+  if (p.dead) { const x = Math.round(p.x), y = Math.round(p.y); px(x - 8, y - 1, 16, 7, '#0b0f1a'); px(x - 7, y, 10, 5, p.cfg.shirt); px(x + 3, y, 4, 5, p.cfg.skin); px(x - 8, y + 5, 5, 2, p.cfg.pants);
+    if (p.dt < 3) { const a = p.dt * 5; for (let i = 0; i < 3; i++) px(Math.round(x + Math.cos(a + i * 2.1) * 9) - 1, Math.round(y - 12 + Math.sin(a + i * 2.1) * 3), 3, 3, '#fde047'); } return; }
+  shadow(p.x, p.y + 11, 14); blit(human(p.cfg, p.mv ? (Math.floor(state.time * 8) % 2) : 0, p.k), p.x, p.y, -2, 28);
+}
+function dhuman(e, cfg, k, label, big) {
+  if (e.stun > 0) return dlay(e, cfg, label);
+  const mv = Math.hypot(e.x - (e._lx ?? e.x), e.y - (e._ly ?? e.y)) > .3; e._lx = e.x; e._ly = e.y; const s = big ? 38 : 32;
+  shadow(e.x, e.y + 12, 20); blit(human(cfg, mv ? (Math.floor(state.time * 8) % 2) : 0, k), e.x, e.y, -3, s);
+  bar(e.x, e.y - s / 2 - 6, 22, e.hp / e.maxHp, '#ef4444'); txt(label, Math.round(e.x), Math.round(e.y - s / 2 - 10));
+}
+function dplayer() {
+  const P = state.player, evo = getCurrentEvo(), st = stageOf(), mv = Math.hypot(P.vx, P.vy) > 5, bob = mv ? (Math.floor(state.time * 9) % 2) : 0;
+  if (P.onBike) dbike(P.x, P.y + 6);
+  const sz = 24 + st * 4; shadow(P.x, P.y + 10, sz - 2);
+  if (st > 1) for (let i = 0; i < 4; i++) { const a = state.time * 3 + i * Math.PI / 2; px(Math.round(P.x + Math.cos(a) * 21) - 1, Math.round(P.y + Math.sin(a) * 15) - 1, 3, 3, lt(evo.color, .6)); }
+  blit(creature(selectedStarter.id, st, evo.color), P.x, P.y, Math.round(9 - sz * .3125) - bob - (P.onBike ? 5 : 0), sz);
+  if (P.invuln > 0 && Math.floor(state.time * 20) % 2) px(Math.round(P.x) - 8, Math.round(P.y) - 8, 16, 16, 'rgba(255,255,255,.35)');
+  aimDots(); txt(evo.name, Math.round(P.x), Math.round(P.y - sz / 2 - 10));
+}
+function compass(o) {
+  if (!o) return; const W = canvas.width, H = canvas.height, P = state.player, dx = o.x - P.x, dy = o.y - P.y, m = Math.round(Math.hypot(dx, dy) / 10), lab = `${clean(o.label)} ${m}m`;
+  const cx = Math.round(state.camera.x), cy = Math.round(state.camera.y), sx = o.x - cx, sy = o.y - cy;
+  if (sx > 30 && sx < W - 30 && sy > 60 && sy < H - 50) {
+    const by = Math.round(Math.sin(state.time * 6) * 2), y0 = sy - 44 + by;
+    px(sx - 5, y0, 10, 2, o.color); px(sx - 3, y0 + 2, 6, 2, o.color); px(sx - 1, y0 + 4, 2, 2, o.color); txt(lab, Math.round(sx), y0 - 5, o.color); return;
+  }
+  const a = Math.atan2(dy, dx), ix = Math.round(P.x - cx + Math.cos(a) * 46), iy = Math.round(P.y - cy + Math.sin(a) * 46);
+  ctx.save(); ctx.translate(ix, iy); ctx.rotate(a); ctx.fillStyle = o.color; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(-6, -6); ctx.lineTo(-3, 0); ctx.lineTo(-6, 6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+  txt(lab, ix, iy + 16, o.color);
+}
+
+// ============ MAIN DRAW ============
+draw = function () {
+  const W = canvas.width, H = canvas.height, sh = shake > 0 ? Math.round((Math.random() - .5) * 4) : 0;
+  const cx = Math.round(state.camera.x) + sh, cy = Math.round(state.camera.y) + sh, T = state.time, P = state.player;
+  const vis = (x, y, m = 40) => x > cx - m && x < cx + W + m && y > cy - m && y < cy + H + m + 30;
+  ctx.imageSmoothingEnabled = false; ctx.save(); ctx.translate(-cx, -cy);
+  ctx.fillStyle = PAT.g; ctx.fillRect(cx, cy, W, H);
+  for (const f of flowers) if (vis(f.x, f.y, 4)) { px(f.x, f.y, 2, 2, f.c); if (theme.tree === 'p') px(f.x, f.y + 2, 1, 2, '#166534'); }
+  // lake
+  px(pond.x - 6, pond.y - 6, pond.w + 12, pond.h + 12, theme.sand); px(pond.x - 2, pond.y - 2, pond.w + 4, pond.h + 4, '#0b0f1a'); px(pond.x, pond.y, pond.w, pond.h, theme.water[0]); px(pond.x + 5, pond.y + 5, pond.w - 10, pond.h - 10, theme.water[1]);
+  for (let i = 0; i < 16; i++) px(Math.round(pond.x + 8 + ((i * 47 + T * 14) % (pond.w - 28))), pond.y + 12 + (i * 37) % (pond.h - 24), 10, 2, theme.water[2]);
+  // sidewalks + roads
+  ctx.fillStyle = PAT.s; ctx.fillRect(0, 492, WORLD_W, 106); ctx.fillRect(672, 0, 111, WORLD_H);
+  ctx.fillStyle = PAT.a; ctx.fillRect(0, 500, WORLD_W, 90); ctx.fillRect(680, 0, 95, WORLD_H);
+  px(0, 503, WORLD_W, 1, '#d1d5db'); px(0, 586, WORLD_W, 1, '#d1d5db'); px(683, 0, 1, WORLD_H, '#d1d5db'); px(771, 0, 1, WORLD_H, '#d1d5db');
+  px(0, 540, 660, 1, '#000'); px(790, 540, WORLD_W, 1, '#000');
+  for (let x = Math.max(0, Math.floor(cx / 24) * 24); x < cx + W; x += 24) if (x < 640 || x > 800) { px(x, 543, 14, 2, '#facc15'); }
+  for (let y = Math.max(0, Math.floor(cy / 24) * 24); y < cy + H; y += 24) if (y < 470 || y > 620) px(726, y, 2, 14, '#facc15');
+  for (let yy = 506; yy < 586; yy += 8) { px(650, yy, 18, 4, '#e5e7eb'); px(788, yy, 18, 4, '#e5e7eb'); }
+  for (let xx = 686; xx < 770; xx += 8) { px(xx, 470, 4, 18, '#e5e7eb'); px(xx, 606, 4, 18, '#e5e7eb'); }
+  for (const l of lamps) if (vis(l.x, l.y)) { px(l.x, l.y - 14, 2, 14, '#374151'); px(l.x - 2, l.y - 17, 6, 3, '#9ca3af'); px(l.x - 1, l.y - 15, 4, 1, '#fde68a'); }
+  // depth-sorted objects
+  const it = [];
+  for (const t of trees) if (vis(t.x, t.y)) it.push([t.y, () => tree(t)]);
+  for (const b of buildings) it.push([b.y + b.h, () => bld(b)]);
+  for (const c of cars) if (!c.dead) it.push([c.y, () => { dcar(c); if (!drive && !P.onBike && c === nearCar()) txt('[F] CONDUCIR', Math.round(c.x), Math.round(c.y + 28), '#fde047'); }]);
+  for (const b of bikes) if (!(P.onBike && b === ridden)) it.push([b.y, () => dbike(b.x, b.y)]);
+  for (const p of peds) it.push([p.y, () => dped(p)]);
+  for (const n of npcs) if (vis(n.x, n.y)) it.push([n.y, () => dnpc(n)]);
+  for (const p of pickups) it.push([p.y, () => dbat(p)]);
+  for (const s of state.squad) it.push([s.y, () => dhuman(s, { shirt: '#1d4ed8', pants: '#1e3a8a', hat: '#1e40af', badge: 1 }, 'S', `SQUAD Nv.${s.lv}`)]);
+  if (state.leader.alive) it.push([state.leader.y, () => dhuman(state.leader, { shirt: LSHIRT[(gymLevel - 1) % 3], pants: '#312e81', hair: '#111', shades: 1, crown: 1, skin: '#e0ac69' }, 'L' + ((gymLevel - 1) % 3), 'LIDER', true)]);
+  if (drive) it.push([drive.y + 1, () => { aimDots(); txt(getCurrentEvo().name, Math.round(drive.x), Math.round(drive.y - 18), getCurrentEvo().color); }]);
+  else it.push([P.y, dplayer]);
+  it.sort((a, b) => a[0] - b[0]); for (const i of it) i[1]();
+  // projectiles, particles, texts
+  for (const p of state.projectiles) dproj(p);
+  for (const q of state.particles) { ctx.globalAlpha = Math.min(1, q.life * 3); px(Math.round(q.x), Math.round(q.y), q.s, q.s, q.c); } ctx.globalAlpha = 1;
+  for (const f of state.floatingTexts) txt(f.text, Math.round(f.x), Math.round(f.y), f.color);
+  crosshair();
+  ctx.restore();
+  // day / night
+  const ph = (0.4 + T / 240) % 1, light = .5 + .5 * Math.sin(TAU * (ph - .25)), dark = clamp((.5 - light) * 1.5, 0, .6), dusk = Math.max(0, .14 - Math.abs(light - .5) * .5);
+  if (dusk > .01) { ctx.fillStyle = `rgba(255,110,40,${dusk})`; ctx.fillRect(0, 0, W, H); }
+  if (dark > .02) {
+    ctx.fillStyle = `rgba(6,10,45,${dark})`; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.translate(-cx, -cy); const k = dark / .6;
+    for (const l of lamps) if (vis(l.x, l.y)) for (const [s, a] of [[56, .07], [38, .09], [22, .14]]) { ctx.fillStyle = `rgba(255,225,130,${a * k})`; ctx.fillRect(l.x + 1 - s / 2, l.y - 14 - s / 2 + 8, s, s); }
+    ctx.globalAlpha = Math.min(1, k * 1.4); for (const b of buildings) for (const [wx, wy] of wins(b)) px(wx, wy, 10, 8, '#fde68a'); ctx.globalAlpha = 1;
+    for (const c of cars) if (!c.dead && vis(c.x, c.y)) withCar(c, () => { ctx.fillStyle = `rgba(255,240,150,${.2 * k})`; ctx.fillRect(18, -9, 34, 18); ctx.fillStyle = `rgba(255,240,150,${.12 * k})`; ctx.fillRect(52, -13, 26, 26); });
+    ctx.restore();
+  }
+  if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash})`; ctx.fillRect(0, 0, W, H); }
+  if (state.wanted >= 2 && state.squad.length) { const f = Math.floor(T * 4) % 2; ctx.fillStyle = f ? 'rgba(239,68,68,.35)' : 'rgba(59,130,246,.35)'; ctx.fillRect(0, 0, W, 3); ctx.fillRect(0, H - 3, W, 3); ctx.fillStyle = f ? 'rgba(59,130,246,.35)' : 'rgba(239,68,68,.35)'; ctx.fillRect(0, 0, 3, H); ctx.fillRect(W - 3, 0, 3, H); }
+  ctx.save(); compass(getPrimaryObjective()); ctx.restore();
+  drawMinimap();
+};
+const _dm = drawMinimap;
+drawMinimap = function () {
+  _dm(); const sx = miniCanvas.width / WORLD_W, sy = miniCanvas.height / WORLD_H;
+  miniCtx.fillStyle = '#38bdf8'; miniCtx.fillRect(pond.x * sx, pond.y * sy, pond.w * sx, pond.h * sy);
+  for (const c of cars) if (!c.dead && (c.kind === 'player' || c.kind === 'parked')) { miniCtx.fillStyle = c.col; miniCtx.fillRect(c.x * sx - 2, c.y * sy - 1, 4, 3); }
+};
+const _rs = renderStarterCards;
+renderStarterCards = function () {
+  _rs();
+  [...document.getElementById('starter-grid').children].forEach((card, i) => {
+    const st = STARTERS[i], row = document.createElement('div'); row.className = 'sp-row';
+    st.evolutions.forEach((e, k) => { const cv = document.createElement('canvas'); cv.width = cv.height = 16; cv.getContext('2d').drawImage(creature(st.id, k, e.color), 0, 0); row.appendChild(cv); });
+    card.prepend(row);
+  });
+};
+renderStarterCards();
+
+// ============ HISTORIA, DIÁLOGOS, MISIONES, INTERIORES ============
+const $ = id => document.getElementById(id);
+const GR = { x: 30, y: 20, w: 560, h: 190 }, HR = { x: 1000, y: 20, w: 300, h: 190 };
+let inside = null, talking = null, challenge = false, fade = 0, typing = null, qcd = 0, rcd = 0, winCard = null, qtxt = '';
+const Q = { bat: 0, batOn: false, rafaga: false, pkg: 0, escudo: false, intro: false, gift: 0 };
+const pickups = [], BATPOS = [[210, 430], [1010, 430], [1560, 430]];
+const save = () => { try { localStorage.setItem('pcs', JSON.stringify({ lvl: gymLevel, Q })); } catch (e) { } };
+const curL = () => LN[(gymLevel - 1) % LN.length];
+const doorOf = b => ({ x: b.x + b.w / 2, y: b.y + b.h + 8 });
+const bById = id => buildings.find(b => b.id === id);
+const LCFG = () => ({ shirt: LSHIRT[(gymLevel - 1) % 3], pants: '#312e81', hair: '#111', shades: 1, crown: 1, skin: '#e0ac69' });
+
+// ---- cuadro de diálogo ----
+const dlg = document.createElement('div'); dlg.id = 'dlg'; dlg.innerHTML = '<div class="dn"></div><div class="dt"></div><div class="dq"></div><div class="dh">▶ F / ENTER / TOCA</div>'; document.body.appendChild(dlg);
+const dN = dlg.children[0], dT = dlg.children[1], dQ = dlg.children[2];
+function typeLine() {
+  clearInterval(typing); const s = talking.lines[talking.i]; let n = 0; dT.textContent = ''; talking.full = false;
+  typing = setInterval(() => { n += 2; dT.textContent = s.slice(0, n); if (n >= s.length) { clearInterval(typing); talking.full = true; if (talking.i === talking.lines.length - 1 && talking.ask) showAsk(); } }, 28);
+}
+function say(name, lines, end, ask) { talking = { name, lines, i: 0, end, ask }; dlg.style.display = 'block'; dN.textContent = name; dQ.innerHTML = ''; typeLine(); }
+function showAsk() {
+  const a = talking.ask; dQ.innerHTML = '';
+  [['SÍ, ¡VAMOS!', a.yes], ['AÚN NO', a.no]].forEach(([t, f]) => { const b = document.createElement('button'); b.textContent = t; b.onclick = e => { e.stopPropagation(); closeDlg(); if (f) f(); }; dQ.appendChild(b); });
+}
+function closeDlg() { clearInterval(typing); const e = talking && talking.end; talking = null; dlg.style.display = 'none'; if (e) e(); }
+function advance() {
+  if (!talking) return; const last = talking.i === talking.lines.length - 1;
+  if (!talking.full) { clearInterval(typing); dT.textContent = talking.lines[talking.i]; talking.full = true; if (last && talking.ask) showAsk(); return; }
+  if (!last) { talking.i++; typeLine(); } else if (!talking.ask) closeDlg();
+}
+dlg.onclick = advance;
+addEventListener('keydown', e => { if (talking && ['Enter', 'Space', 'KeyF', 'KeyE'].includes(e.code)) { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) advance(); } }, true);
+
+// ---- NPCs ----
+const mkNpc = (id, name, x, y, cfg, mark, talk) => ({ id, name, x, y, cfg, k: 'n' + id, mark, talk });
+const npcs = [
+  mkNpc('abedul', 'PROF. ABEDUL', 600, 455, { shirt: '#f8fafc', pants: '#475569', hair: '#e5e7eb' }, () => '', () => say('PROF. ABEDUL', gymLevel === 1 ? [
+    '¡Por fin llegas! Soy el Profesor Abedul. Esta ciudad lleva años bajo el control del Líder DRAKE y su Squad.',
+    'Neón, autos veloces, dinero fácil... y un gimnasio convertido en cuartel. Nadie ha podido con él.',
+    'Entra al GYM (el edificio morado, al noreste) y rétalo. Pero no vayas sin preparación: Lucía y Don Chato te enseñarán técnicas nuevas.',
+    'Y ojo: robar autos o atacar a la gente trae al Squad. En esta ciudad todo se paga.'] : [
+    `${curL()} controla ${theme.name} ahora. Drake solo fue el principio.`, 'Sigue creciendo: más fuerte, más rápido. Y recuerda: el Líder te espera DENTRO del gym.'])),
+  mkNpc('lucia', 'LUCIA', 480, 395, { shirt: '#ec4899', pants: '#1e3a8a', hair: '#7c2d12', skin: '#e0ac69' }, () => Q.rafaga ? '' : '!', () => {
+    if (Q.rafaga) return say('LUCIA', ['Esa Ráfaga se te ve genial. ¡Dale duro al Líder! (Tecla Q)']);
+    if (!Q.batOn) return say('LUCIA', ['¡Eh, tú! Soy Lucía, ingeniera del P.C. Se me cayeron 3 baterías por la ciudad cuando huía del Squad.', 'Tráemelas y te enseño la RÁFAGA: un abanico de 5 disparos. Las cajas amarillas brillan en el mapa.'], () => { Q.batOn = true; spawnBats(); save(); });
+    if (Q.bat < 3) return say('LUCIA', [`Te faltan ${3 - Q.bat} baterías. ¡Busca las cajas amarillas que brillan!`]);
+    say('LUCIA', ['¡Las tienes todas! Eres un crack. RÁFAGA desbloqueada: tecla Q.'], () => { Q.rafaga = true; state.cash += 100; showToast('⚡ ¡Nuevo ataque: RÁFAGA (Q)!'); unlockUI(); save(); });
+  }),
+  mkNpc('chato', 'DON CHATO', 230, 640, { shirt: '#f59e0b', pants: '#374151', hair: '#111', hat: '#dc2626' }, () => Q.escudo ? '' : '!', () => {
+    if (Q.escudo) return say('DON CHATO', ['Ese Escudo eléctrico te salvará la vida. (Tecla R)']);
+    if (Q.pkg === 0) return say('DON CHATO', ['Soy Chato, el mecánico. Lleva este paquete al HOTEL, rápido y sin que el Squad lo vea.', 'Si lo entregas te enseño el ESCUDO ELÉCTRICO. La puerta del hotel está al sureste.'], () => { Q.pkg = 1; save(); });
+    say('DON CHATO', ['¿Sigues aquí? ¡El paquete va al HOTEL!']);
+  }),
+  mkNpc('rufus', 'RUFUS', 1560, 618, { shirt: '#111827', pants: '#111827', hair: '#e5e7eb', shades: 1 }, () => '', () => say('RUFUS', ['Psst... dicen que a Drake le encanta el lujo, pero le cuesta esquivar ataques de lado.', 'Con Ráfaga y Escudo tendrás ventaja. Y si caes, el P.C. te cura. Así es Poké-City, amigo.']))
+];
+const HN = {
+  house1: () => mkNpc('marge', 'MARGE', HR.x + 90, HR.y + 112, { shirt: '#a78bfa', pants: '#1f2937', hair: '#e5e7eb' }, () => '', () => say('MARGE', ['Mi hijo era entrenador antes de que Drake cerrara el gym a todos.', 'Toma un té caliente. Y devuélvenos la ciudad, ¿sí?'], () => { applyLevelStats(true); showToast('☕ ¡Te sientes renovado!'); })),
+  house2: () => mkNpc('raul', 'ABUELO RAUL', HR.x + 90, HR.y + 112, { shirt: '#65a30d', pants: '#44403c', hair: '#e5e7eb' }, () => '', () => say('ABUELO RAUL', ['Yo fui campeón de este gym hace mil años. El Líder dispara lento: esquiva de lado y contraataca.', Q.gift !== gymLevel ? 'Toma unos billetes para tu aventura.' : 'Ya te di lo que tenía, muchacho.'], () => { if (Q.gift !== gymLevel) { Q.gift = gymLevel; state.cash += 75; showToast('💵 +$75'); save(); } }))
+};
+const nearNpc = () => { const P = state.player; return npcs.find(n => Math.hypot(P.x - n.x, P.y - n.y) < 46); };
+function spawnBats() { pickups.length = 0; BATPOS.slice(Q.bat).forEach(([x, y]) => pickups.push({ x, y })); }
+function dnpc(n) {
+  const x = Math.round(n.x), y = Math.round(n.y); shadow(x, y + 12, 20); blit(human(n.cfg, 0, n.k), x, y, -2 - (Math.floor(state.time * 2) % 2), 32);
+  txt(n.name, x, y - 22); const m = n.mark(); if (m) txt(m, x, y - 32 + Math.round(Math.sin(state.time * 6) * 2), '#fde047');
+}
+function dbat(p) {
+  const x = Math.round(p.x), y = Math.round(p.y + Math.sin(state.time * 4 + p.x) * 3); ctx.fillStyle = 'rgba(253,224,71,.25)'; ctx.fillRect(x - 14, y - 14, 28, 28);
+  px(x - 7, y - 6, 14, 12, '#0b0f1a'); px(x - 6, y - 5, 12, 10, '#facc15'); px(x - 1, y - 4, 3, 4, '#0b0f1a'); px(x - 3, y, 3, 4, '#0b0f1a'); px(x - 4, y - 7, 8, 2, '#fff');
+}
+
+// ---- interiores ----
+const DOORS = ['gym', 'house1', 'house2'];
+const nearDoor = () => { const P = state.player; return buildings.find(b => DOORS.includes(b.id) && Math.hypot(P.x - doorOf(b).x, P.y - doorOf(b).y) < 46); };
+function enterB(b) {
+  const P = state.player, R = b.id === 'gym' ? GR : HR, L = state.leader;
+  inside = { id: b.id, b, R, obs: b.id === 'gym' ? [] : [{ x: R.x + 8, y: R.y + 42, w: 52, h: 74 }, { x: R.x + 148, y: R.y + 98, w: 68, h: 36 }], npc: HN[b.id] ? HN[b.id]() : null };
+  P.x = R.x + R.w / 2; P.y = R.y + R.h - 26; P.vx = P.vy = 0; P.onBike = false; fade = 1; state.projectiles = [];
+  if (b.id === 'gym') { L.idle = true; challenge = false; L.x = L.homeX; L.y = L.homeY; L.hp = L.maxHp; showToast(`🏛️ Gimnasio de ${curL()}: habla con el Líder para retarlo`); }
+}
+function leaveRoom(dead) {
+  if (!inside) return; const P = state.player, L = state.leader, d = doorOf(inside.b);
+  if (inside.id === 'gym') { L.idle = true; L.hp = L.maxHp; L.x = L.homeX; L.y = L.homeY; challenge = false; }
+  state.projectiles = []; inside = null; fade = 1; if (!dead) { P.x = d.x; P.y = d.y + 34; }
+}
+function startChallenge() { const L = state.leader; challenge = true; L.idle = false; L.hp = L.maxHp; L.atkTimer = 1; bn.textContent = '¡COMBATE!'; bn.style.color = '#ef4444'; bn.classList.add('show'); clearTimeout(bn._t); bn._t = setTimeout(() => bn.classList.remove('show'), 1500); }
+function leaderTalk() {
+  say('LIDER ' + curL(), ['Así que tú eres el que anda armando ruido en MI ciudad...', gymLevel > 1 ? `Y ahora quieres también ${theme.name}. Qué ambición.` : 'Poké-City es mía: el gym, las calles, hasta el neón de las noches. Nadie me ha ganado.', 'Si quieres liberar el barrio tendrás que pasar sobre mí. ¿Aceptas el reto?'], null, { yes: startChallenge });
+}
+function roomInteract() {
+  const P = state.player, R = inside.R, L = state.leader;
+  if (Math.hypot(P.x - (R.x + R.w / 2), P.y - (R.y + R.h - 8)) < 44) return leaveRoom();
+  if (inside.id === 'gym') { if (L.alive && L.idle && Math.hypot(P.x - L.x, P.y - L.y) < 80) leaderTalk(); }
+  else if (inside.npc && Math.hypot(P.x - inside.npc.x, P.y - inside.npc.y) < 58) inside.npc.talk();
+}
+function roomStep() {
+  const R = inside.R, P = state.player, L = state.leader; state.wanted = 0; state.squad.length = 0;
+  P.x = clamp(P.x, R.x + 14, R.x + R.w - 14); P.y = clamp(P.y, R.y + 40, R.y + R.h - 12);
+  for (const o of inside.obs) { const cx = clamp(P.x, o.x, o.x + o.w), cy = clamp(P.y, o.y, o.y + o.h); let dx = P.x - cx, dy = P.y - cy, d = Math.hypot(dx, dy); if (d < 11) { if (d < .01) { dx = 0; dy = 1; d = 1; } P.x += dx / d * (11 - d); P.y += dy / d * (11 - d); } }
+  if (inside.id === 'gym') { L.x = clamp(L.x, R.x + 20, R.x + R.w - 20); L.y = clamp(L.y, R.y + 40, R.y + R.h - 16); if (L.idle) state.projectiles = state.projectiles.filter(p => !p.fromPlayer); }
+  state.camera.x = R.x + R.w / 2 - canvas.width / 2; state.camera.y = R.y + R.h / 2 - canvas.height / 2; cds(0);
+}
+function drawRoom() {
+  const W = canvas.width, H = canvas.height, cx = Math.round(state.camera.x), cy = Math.round(state.camera.y), R = inside.R, g = inside.id === 'gym', L = state.leader, P = state.player;
+  ctx.imageSmoothingEnabled = false; px(0, 0, W, H, '#05070d'); ctx.save(); ctx.translate(-cx, -cy); px(R.x - 4, R.y - 4, R.w + 8, R.h + 8, '#000');
+  const wall = g ? dk(LSHIRT[(gymLevel - 1) % 3], .45) : '#8b6b4a';
+  for (let y = R.y + 34; y < R.y + R.h; y += 16) for (let x = R.x; x < R.x + R.w; x += 16) px(x, y, 16, 16, ((x - R.x + y - R.y) / 16) % 2 ? (g ? '#7c4a2d' : '#c9a26b') : (g ? '#8b5a38' : '#d4b07a'));
+  px(R.x, R.y, R.w, 34, wall); for (let x = R.x; x < R.x + R.w; x += 20) px(x, R.y, 1, 34, dk(wall, .3)); px(R.x, R.y + 30, R.w, 4, dk(wall, .5));
+  if (g) {
+    for (let i = 0; i < 6; i++) { const x = R.x + 40 + i * 90; px(x, R.y + 4, 16, 24, '#0b0f1a'); px(x + 1, R.y + 5, 14, 22, '#facc15'); px(x + 4, R.y + 11, 8, 8, '#7c3aed'); }
+    px(R.x + 40, R.y + 60, R.w - 80, 2, '#fff'); px(R.x + 40, R.y + R.h - 36, R.w - 80, 2, '#fff'); px(R.x + R.w / 2 - 1, R.y + 60, 2, R.h - 96, '#fff');
+    px(R.x + R.w / 2 - 12, R.y + R.h / 2 - 2, 24, 4, '#fff'); px(R.x + 10, R.y + 38, 14, 18, '#fde047'); px(R.x + R.w - 24, R.y + 38, 14, 18, '#fde047');
+  } else {
+    px(R.x + 120, R.y + 5, 38, 24, '#0b0f1a'); px(R.x + 122, R.y + 7, 34, 20, '#7dd3fc'); px(R.x + 138, R.y + 7, 2, 20, '#0b0f1a');
+    px(R.x + 200, R.y + 5, 42, 26, '#0b0f1a'); px(R.x + 202, R.y + 7, 38, 22, '#38bdf8');
+    px(R.x + 90, R.y + 60, 70, 40, '#7f1d1d'); px(R.x + 94, R.y + 64, 62, 32, '#b91c1c');
+    px(R.x + 8, R.y + 42, 52, 74, '#0b0f1a'); px(R.x + 10, R.y + 44, 48, 70, '#3b82f6'); px(R.x + 12, R.y + 46, 44, 14, '#fff');
+    px(R.x + 148, R.y + 98, 68, 36, '#0b0f1a'); px(R.x + 150, R.y + 100, 64, 32, '#92400e'); px(R.x + 160, R.y + 108, 10, 8, '#fff'); px(R.x + 190, R.y + 108, 10, 8, '#fff');
+    px(R.x + 266, R.y + 46, 16, 14, '#92400e'); px(R.x + 262, R.y + 30, 24, 18, '#16a34a');
+  }
+  px(R.x + R.w / 2 - 20, R.y + R.h - 8, 40, 8, '#7f1d1d'); px(R.x + R.w / 2 - 18, R.y + R.h - 6, 36, 4, '#b91c1c');
+  const it = [[P.y, dplayer]];
+  if (g && L.alive) it.push([L.y, () => dhuman(L, LCFG(), 'L' + ((gymLevel - 1) % 3), 'LIDER', true)]);
+  if (inside.npc) it.push([inside.npc.y, () => dnpc(inside.npc)]);
+  it.sort((a, b) => a[0] - b[0]); for (const i of it) i[1]();
+  const near = (x, y, r) => Math.hypot(P.x - x, P.y - y) < r;
+  if (near(R.x + R.w / 2, R.y + R.h - 8, 44)) txt('[F] SALIR', Math.round(R.x + R.w / 2), R.y + R.h + 14, '#fde047');
+  if (g && L.alive && L.idle && near(L.x, L.y, 80)) txt('[F] RETAR', Math.round(L.x), Math.round(L.y - 38), '#fde047');
+  if (inside.npc && near(inside.npc.x, inside.npc.y, 58)) txt('[F] HABLAR', Math.round(inside.npc.x), Math.round(inside.npc.y - 36), '#fde047');
+  for (const p of state.projectiles) dproj(p);
+  for (const q of state.particles) { ctx.globalAlpha = Math.min(1, q.life * 3); px(Math.round(q.x), Math.round(q.y), q.s, q.s, q.c); } ctx.globalAlpha = 1;
+  for (const f of state.floatingTexts) txt(f.text, Math.round(f.x), Math.round(f.y), f.color);
+  crosshair(); ctx.restore();
+}
+function worldPrompts() {
+  if (drive) return; const cx = Math.round(state.camera.x), cy = Math.round(state.camera.y), P = state.player; ctx.save(); ctx.translate(-cx, -cy);
+  const n = nearNpc(); if (n) txt('[F] HABLAR', Math.round(n.x), Math.round(n.y - 40), '#fde047');
+  const b = nearDoor(); if (b) { const d = doorOf(b); txt(b.id === 'gym' ? '[F] ENTRAR AL GYM' : '[F] ENTRAR', Math.round(d.x), Math.round(d.y + 14), '#fde047'); }
+  ctx.restore();
+}
+const _draw = draw;
+draw = function () {
+  if (inside) drawRoom(); else { _draw(); worldPrompts(); }
+  if (fade > 0) { ctx.fillStyle = `rgba(0,0,0,${fade})`; ctx.fillRect(0, 0, canvas.width, canvas.height); fade = Math.max(0, fade - .035); }
+};
+
+// ---- misiones y habilidades ----
+const sk = document.createElement('div'); sk.id = 'skills'; sk.innerHTML = '<button id="sk-q" class="sk">RAFAGA (Q)</button><button id="sk-r" class="sk">ESCUDO (R)</button>'; document.body.appendChild(sk);
+const qh = document.createElement('div'); qh.id = 'qhud'; document.body.appendChild(qh);
+function unlockUI() { sk.style.display = (Q.rafaga || Q.escudo) ? 'flex' : 'none'; $('sk-q').style.display = Q.rafaga ? 'block' : 'none'; $('sk-r').style.display = Q.escudo ? 'block' : 'none'; }
+function fan() {
+  if (!Q.rafaga || qcd > 0 || !state.running || talking) return; qcd = 2.5; const P = state.player, a = getAimAngle(), evo = getCurrentEvo(); AudioEngine.sfxSpecial();
+  for (let i = -2; i <= 2; i++) { const b = a + i * .22; state.projectiles.push({ fromPlayer: true, x: P.x + Math.cos(b) * 20, y: P.y + Math.sin(b) * 20, vx: Math.cos(b) * 400, vy: Math.sin(b) * 400, radius: 6, dmg: Math.round(P.atk * .9), color: evo.color, life: .7 }); }
+}
+function shield() { if (!Q.escudo || rcd > 0 || !state.running || talking) return; rcd = 9; state.player.invuln = 2.5; spark(state.player.x, state.player.y, 14, '#7dd3fc'); AudioEngine.sfxSpecial(); showToast('🛡️ ¡Escudo eléctrico!'); }
+$('sk-q').onclick = fan; $('sk-r').onclick = shield;
+addEventListener('keydown', e => { if (!state.running || talking || e.repeat) return; if (e.code === 'KeyQ') fan(); if (e.code === 'KeyR') shield(); });
+function cds(dt) { qcd = Math.max(0, qcd - dt); rcd = Math.max(0, rcd - dt); $('sk-q').textContent = qcd > 0 ? `RAFAGA ${qcd.toFixed(1)}` : 'RAFAGA (Q)'; $('sk-r').textContent = rcd > 0 ? `ESCUDO ${rcd.toFixed(0)}` : 'ESCUDO (R)'; }
+function questStep(dt) {
+  const P = state.player; cds(dt);
+  for (let i = pickups.length - 1; i >= 0; i--) if (Math.hypot(P.x - pickups[i].x, P.y - pickups[i].y) < 26) { pickups.splice(i, 1); Q.bat++; AudioEngine.sfxHit(); showToast(`⚡ Batería ${Q.bat}/3` + (Q.bat >= 3 ? ' — ¡vuelve con Lucía!' : '')); save(); }
+  if (Q.pkg === 1) { const d = doorOf(bById('hotel')); if (Math.hypot(P.x - d.x, P.y - d.y) < 50) { Q.pkg = 2; Q.escudo = true; state.cash += 150; unlockUI(); save(); say('RECEPCIONISTA', ['Ah, el paquete de Don Chato. Gracias, aquí tienes tu propina: $150.', '¡ESCUDO ELÉCTRICO desbloqueado! Presiona R para activarlo.']); } }
+  const t = (Q.batOn && !Q.rafaga ? `⚡ Baterías ${Q.bat}/3${Q.bat >= 3 ? ' → Lucía' : ''}\n` : '') + (Q.pkg === 1 ? '📦 Entrega el paquete al HOTEL' : '');
+  if (t !== qtxt) { qtxt = t; qh.textContent = t; qh.style.display = t ? 'block' : 'none'; }
+}
+const _gpo = getPrimaryObjective;
+getPrimaryObjective = function () {
+  if (inside) return null;
+  if (Q.batOn && !Q.rafaga) { if (pickups.length) return { x: pickups[0].x, y: pickups[0].y, label: '⚡ BATERIA', color: '#fde047' }; const l = npcs[1]; return { x: l.x, y: l.y, label: 'LUCIA', color: '#ec4899' }; }
+  if (Q.pkg === 1) { const d = doorOf(bById('hotel')); return { x: d.x, y: d.y, label: '📦 HOTEL', color: '#38bdf8' }; }
+  const o = _gpo(); if (o && /LÍDER/.test(o.label)) { const d = doorOf(bById('gym')); return { x: d.x, y: d.y, label: '🏛 GYM', color: o.color }; } return o;
+};
+const _fba = fireBasicAttack; fireBasicAttack = function () { if (talking) return; _fba(); };
+
+// ---- compartir ----
+function makeCard(n) {
+  const c = document.createElement('canvas'); c.width = 960; c.height = 540; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+  g.fillStyle = '#0b1020'; g.fillRect(0, 0, 960, 540); const h = Math.round(960 * canvas.height / canvas.width); g.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, Math.round((540 - h) / 2), 960, h);
+  g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(0, 0, 960, 130); g.fillRect(0, 440, 960, 100); g.textAlign = 'center';
+  g.font = 'italic 900 64px Impact,Arial Black,sans-serif'; g.lineWidth = 8; g.strokeStyle = '#000'; g.fillStyle = '#fde047'; g.strokeText('¡LO LOGRÉ! NIVEL ' + (n + 1), 480, 90); g.fillText('¡LO LOGRÉ! NIVEL ' + (n + 1), 480, 90);
+  g.font = 'bold 26px Arial'; g.fillStyle = '#fff'; g.fillText(`${getCurrentEvo().name} derrotó al Líder ${LN[(n - 1) % LN.length]} en POKÉ-CITY`, 480, 490); g.fillStyle = '#fbbf24'; g.fillText('¿Puedes superarme?', 480, 524);
+  return c;
+}
+async function shareWin(n) {
+  const base = location.protocol === 'file:' ? location.href.split('?')[0] : location.origin + location.pathname;
+  const link = base + '?reto=' + encodeURIComponent(getCurrentEvo().name) + '&nv=' + (n + 1), text = `¡Derroté al Líder ${LN[(n - 1) % LN.length]} y llegué al Nivel ${n + 1} en POKÉ-CITY! 🔥 ¿Puedes superarme?`;
+  try { const blob = await new Promise(r => winCard.toBlob(r)), f = new File([blob], 'poke-city.png', { type: 'image/png' }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text, url: link }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { if (navigator.share) { await navigator.share({ text, url: link }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  const t = encodeURIComponent(text), u = encodeURIComponent(link), box = $('lm-links');
+  box.innerHTML = `<a target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?text=${t}&url=${u}">X</a><a target="_blank" rel="noopener" href="https://wa.me/?text=${t}%20${u}">WHATSAPP</a><a target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=${u}">FACEBOOK</a><a id="lm-copy" href="#">COPIAR</a><a download="poke-city.png" href="${winCard.toDataURL()}">IMAGEN</a>`;
+  $('lm-copy').onclick = e => { e.preventDefault(); (navigator.clipboard ? navigator.clipboard.writeText(text + ' ' + link) : Promise.reject()).then(() => showToast('📋 ¡Copiado!'), () => prompt('Copia tu mensaje:', text + ' ' + link)); };
+}
+
+// ============ APUNTADO MEJORADO ============
+let face = 0;
+const aimMouse = () => { const pt = state.pointer; return pt.active && pt.mouse && performance.now() / 1000 - pt.t < 3; };
+getAimAngle = function () {
+  const P = state.player, pt = state.pointer, now = performance.now() / 1000;
+  if (aimMouse() || (pt.active && !pt.mouse && now - (pt.tap || -9) < .4)) return Math.atan2(pt.y + state.camera.y - P.y, pt.x + state.camera.x - P.x);
+  let best = null, bd = 300;
+  for (const e of state.squad.concat(state.leader.alive ? [state.leader] : [])) { const d = Math.hypot(e.x - P.x, e.y - P.y); if (d < bd) { bd = d; best = e; } }
+  return best ? Math.atan2(best.y - P.y, best.x - P.x) : face;
+};
+function aimDots() {
+  const P = state.player, a = getAimAngle();
+  for (let k = 0; k < 3; k++) px(Math.round(P.x + Math.cos(a) * (30 + k * 7)) - 1, Math.round(P.y + Math.sin(a) * (30 + k * 7)) - 1, 3 - (k > 1 ? 1 : 0), 3 - (k > 1 ? 1 : 0), k ? '#fff' : '#fde047');
+}
+function crosshair() {
+  if (!aimMouse()) return; const x = Math.round(state.pointer.x + state.camera.x), y = Math.round(state.pointer.y + state.camera.y);
+  px(x - 7, y, 4, 1, '#fde047'); px(x + 4, y, 4, 1, '#fde047'); px(x, y - 7, 1, 4, '#fde047'); px(x, y + 4, 1, 4, '#fde047'); px(x, y, 1, 1, '#ef4444');
+}
+
+// ---- formas de ataque por tipo ----
+const SH = {
+  pikachu: () => [[-12, 0, 3, '#fde047'], [-9, 3, 3, '#fde047'], [-6, 6, 3, '#fde047'], [-3, 3, 3, '#fff'], [0, 0, 3, '#fff'], [3, -3, 3, '#fff'], [6, -6, 3, '#fde047'], [9, -3, 3, '#fde047'], [12, 0, 3, '#fde047'], [14, 3, 2, '#fff']],
+  squirtle: () => [[6, 0, 4, '#38bdf8'], [3, 0, 7, '#38bdf8'], [-1, 0, 8, '#38bdf8'], [-5, 0, 5, '#0ea5e9'], [-8, 0, 3, '#0ea5e9'], [-11, 0, 1, '#7dd3fc'], [1, -2, 2, '#e0f2fe']],
+  bulbasaur: () => [[-6, 0, 2, '#16a34a'], [-3, 0, 4, '#4ade80'], [0, 0, 6, '#4ade80'], [3, 0, 4, '#22c55e'], [6, 0, 2, '#16a34a'], [-3, 0, 1, '#166534'], [-1, 0, 1, '#166534'], [1, 0, 1, '#166534'], [3, 0, 1, '#166534']],
+  charmander: () => { const j = Math.round(Math.sin(state.time * 30)); return [[-16, j, 3, '#fde047'], [-12, -j, 5, '#f97316'], [-7, j, 7, '#ef4444'], [0, 0, 10, '#f97316'], [1, 0, 6, '#fde047'], [2, 0, 3, '#fff']]; }
+};
+function dproj(p) {
+  if (!p.fromPlayer) { const r = Math.round(p.radius * .8) + 1, x = Math.round(p.x), y = Math.round(p.y); px(x - r - 1, y - r - 1, r * 2 + 2, r * 2 + 2, '#0b0f1a'); px(x - r, y - r, r * 2, r * 2, p.color); px(x - 1, y - 1, 2, 2, '#fff'); return; }
+  const id = selectedStarter.id, k = clamp(p.radius / 7, .8, 1.5); let a = Math.atan2(p.vy, p.vx); if (id === 'bulbasaur') a += state.time * 12 + p.x * .02;
+  const pts = (SH[id] || SH.pikachu)(), c = Math.cos(a), s = Math.sin(a);
+  for (const pass of [1, 0]) for (const [f, sd, sz, col] of pts) {
+    const ff = f * k, ss = sd * k, z = Math.max(1, Math.round(sz * k)) + (pass ? 2 : 0);
+    px(Math.round(p.x + c * ff - s * ss - z / 2), Math.round(p.y + s * ff + c * ss - z / 2), z, z, pass ? '#0b0f1a' : col);
+  }
+}
+function dlay(e, cfg, label) {
+  const x = Math.round(e.x), y = Math.round(e.y);
+  px(x - 10, y - 1, 20, 9, '#0b0f1a'); px(x - 9, y, 13, 7, cfg.shirt); px(x + 4, y, 6, 7, cfg.skin || '#f1c27d'); px(x - 10, y + 7, 7, 2, cfg.pants);
+  if (cfg.hat) px(x + 3, y - 1, 7, 2, cfg.hat); if (cfg.crown) px(x + 4, y - 3, 5, 2, '#facc15');
+  const a = state.time * 5; for (let i = 0; i < 3; i++) px(Math.round(x + Math.cos(a + i * 2.1) * 10) - 1, Math.round(y - 12 + Math.sin(a + i * 2.1) * 3), 3, 3, '#fde047');
+  bar(x, y - 16, 22, e.hp / e.maxHp, '#ef4444'); txt(label, x, y - 20);
+}
+
+// ============ NIVELES DE GIMNASIO Y ESCENARIOS ============
+const THEMES = [
+  { name: 'PUEBLO PALETA', g: ['#3d8a4e', '#357c46', '#48a05a', '#2f6f40'], a: ['#3f4652', '#383e49', '#474f5c', '#4d5563'], s: ['#b4b9c2', '#979da8'], fl: ['#f472b6', '#fde047', '#fff', '#a78bfa'], tree: 'p', water: ['#2563eb', '#3b82f6', '#93c5fd'], sand: '#e7d3a1', mini: '#14532d' },
+  { name: 'CIUDAD CARMIN', g: ['#d9b36a', '#cfa55a', '#e3c27e', '#bf9548'], a: ['#4a3f3a', '#40352f', '#554a44', '#5b4f48'], s: ['#d8c9a8', '#b7a67f'], fl: ['#a16207', '#92400e', '#65a30d', '#dc2626'], tree: 'c', water: ['#0d9488', '#14b8a6', '#99f6e4'], sand: '#f3e2b0', mini: '#a16207' },
+  { name: 'MONTE NEVADO', g: ['#e8f1f8', '#dbe8f2', '#f6fbff', '#c9dbea'], a: ['#4b5563', '#434b57', '#566070', '#5d6777'], s: ['#cbd5e1', '#94a3b8'], fl: ['#bae6fd', '#fff', '#7dd3fc', '#e0f2fe'], tree: 's', water: ['#7dd3fc', '#bae6fd', '#ffffff'], sand: '#f1f5f9', mini: '#94a3b8' }
+];
+let theme = THEMES[0], gymLevel = 1, modalOpen = false;
+const LN = ['DRAKE', 'BLAZE', 'FROST', 'VORTEX', 'TITAN'], LSHIRT = ['#7c3aed', '#dc2626', '#0284c7'];
+const lstats = n => ({ hp: 260 + (n - 1) * 180, atk: 22 + (n - 1) * 10, speed: 118 + (n - 1) * 8 });
+function buildPats(th) {
+  return {
+    g: mkPat(64, c => { c.fillStyle = th.g[0]; c.fillRect(0, 0, 64, 64); for (let i = 0; i < 90; i++) { c.fillStyle = th.g[1 + i % 3]; c.fillRect((rnd() * 64) | 0, (rnd() * 64) | 0, 2, 2); } }),
+    a: mkPat(32, c => { c.fillStyle = th.a[0]; c.fillRect(0, 0, 32, 32); for (let i = 0; i < 40; i++) { c.fillStyle = th.a[1 + i % 3]; c.fillRect((rnd() * 32) | 0, (rnd() * 32) | 0, 1, 1); } }),
+    s: mkPat(16, c => { c.fillStyle = th.s[0]; c.fillRect(0, 0, 16, 16); c.fillStyle = th.s[1]; c.fillRect(15, 0, 1, 16); c.fillRect(0, 15, 16, 1); })
+  };
+}
+function genWorld(sd) {
+  seed = sd; trees.length = 0; flowers.length = 0;
+  for (let i = 0; i < 110 && trees.length < 90; i++) { const x = Math.round(rnd() * WORLD_W), y = Math.round(rnd() * WORLD_H), t = rnd() < .55 ? 0 : 1;
+    if (inRoad(x, y, 40) || nearRect(x, y, 36) || Math.hypot(x - 720, y - 540) < 200) continue; trees.push({ x, y, t: theme.tree === 'p' ? t : 0 }); }
+  for (let i = 0; i < 260; i++) { const x = Math.round(rnd() * WORLD_W), y = Math.round(rnd() * WORLD_H);
+    if (inRoad(x, y, 14) || nearRect(x, y, 4)) continue; flowers.push({ x, y, c: theme.fl[i % 4] }); }
+}
+function cactus(x, y) {
+  px(x - 8, y - 2, 16, 4, 'rgba(0,0,0,.25)'); px(x - 4, y - 23, 8, 23, '#0b0f1a'); px(x - 3, y - 22, 6, 22, '#2f855a'); px(x - 1, y - 22, 2, 22, '#48bb78');
+  px(x - 10, y - 17, 7, 6, '#0b0f1a'); px(x - 9, y - 16, 5, 4, '#2f855a'); px(x - 9, y - 21, 4, 8, '#2f855a'); px(x + 3, y - 14, 7, 6, '#0b0f1a'); px(x + 4, y - 13, 5, 4, '#2f855a'); px(x + 5, y - 19, 4, 8, '#2f855a');
+}
+function applyLevel() {
+  const L = state.leader, n = gymLevel, st = lstats(n);
+  theme = THEMES[(n - 1) % THEMES.length]; PAT = buildPats(theme); genWorld(7 + n * 13); window.MINI_BG = theme.mini;
+  L.maxHp = st.hp; L.hp = st.hp; L.atk = st.atk; L.speed = L._base = st.speed; L.name = `👑 LÍDER ${LN[(n - 1) % LN.length]} Nv.${n}`;
+  L.alive = true; L.homeX = GR.x + GR.w / 2; L.homeY = GR.y + 74; L.x = L.homeX; L.y = L.homeY; L.stun = 0; L.idle = true; L.respawnTimer = 0;
+  document.querySelector('.minimap-header span').textContent = theme.name;
+}
+function showLevelModal() {
+  if (modalOpen) return; modalOpen = true; state.running = false;
+  const n = gymLevel, nx = n + 1, th = THEMES[n % THEMES.length], s = lstats(nx);
+  lm.innerHTML = `<div class="lm-card"><div class="lm-t">¡LO LOGRASTE!</div><div class="lm-s">Derrotaste al LÍDER ${LN[(n - 1) % LN.length]}</div>
+    <div class="lm-lv">GIMNASIO NIVEL ${n} <b>➜</b> NIVEL ${nx}</div>
+    <div class="lm-row">NUEVO ESCENARIO<br><span>${th.name}</span></div>
+    <div class="lm-row">NUEVO LÍDER: ${LN[n % LN.length]}<br><span>HP ${s.hp} · ATAQUE ${s.atk}</span></div>
+    <div class="lm-row">RECOMPENSA<br><span>+$${250 * n} · +80 XP · HP al máximo</span></div>
+    <button class="btn-share" id="lm-share">📣 COMPARTIR MI LOGRO</button><div id="lm-links"></div><button class="btn-primary" id="lm-go">CONTINUAR</button></div>`;
+  lm.style.display = 'flex'; document.getElementById('lm-go').onclick = nextLevel; winCard = makeCard(n); document.getElementById('lm-share').onclick = () => shareWin(n); AudioEngine.sfxLevelUp();
+}
+function nextLevel() {
+  if (!modalOpen) return; const n = gymLevel; gymLevel++; modalOpen = false; lm.style.display = 'none';
+  inside = null; challenge = false; applyLevel(); spawnWorld(); save(); const P = state.player; P.x = 720; P.y = 540; P.onBike = false;
+  state.wanted = 0; state.squad = []; state.activeMission = null; state.projectiles = []; state.cash += 250 * n; applyLevelStats(true); gainXp(80);
+  state.running = true; showToast(`🌎 Nuevo escenario: ${theme.name}`);
+  bn.textContent = `NIVEL ${gymLevel}`; bn.style.color = '#4ade80'; bn.classList.add('show'); clearTimeout(bn._t); bn._t = setTimeout(() => bn.classList.remove('show'), 2200); flash = 1;
+}
+const lm = document.createElement('div'); lm.id = 'level-modal'; document.body.appendChild(lm);
+addEventListener('keydown', e => { if (modalOpen && (e.key === 'Enter' || e.code === 'Space')) { e.preventDefault(); nextLevel(); } });
+const _oed = onEnemyDefeated;
+onEnemyDefeated = function (isLeader) { _oed(isLeader); if (isLeader) { state.leader.respawnTimer = 1e9; setTimeout(showLevelModal, 1100); } };
+const _ssm = spawnSquadMember;
+spawnSquadMember = function (x, y, lv = 2) { _ssm(x, y, lv + gymLevel - 1); };
+applyLevel();
+
+// ============ CARGA DE PROGRESO, INTRO Y RETOS ============
+try { const s = JSON.parse(localStorage.getItem('pcs') || 'null'); if (s) { gymLevel = s.lvl || 1; Object.assign(Q, s.Q || {}); } } catch (e) { }
+applyLevel(); unlockUI(); if (Q.batOn && !Q.rafaga) spawnBats();
+$('btn-start').addEventListener('click', () => {
+  if (!Q.intro) { Q.intro = true; save(); setTimeout(() => say('NARRADOR', ['POKÉ-CITY. Neón, autos veloces y criaturas legendarias bajo un mismo cielo.', 'Hace cinco años el Líder DRAKE tomó el gimnasio y, con su Squad, el control de cada calle.', 'Tú eres nuevo en la ciudad... y tienes algo que nadie más: hambre de ganar.', 'Habla con el PROF. ABEDUL, cerca de la avenida. Tu historia empieza ahora.']), 600); }
+  const rq = new URLSearchParams(location.search); if (rq.get('reto')) setTimeout(() => showToast(`⚔️ ${rq.get('reto')} te retó: ¡llega al Nivel ${rq.get('nv') || 2}!`), 1500);
+});
+{ const rq = new URLSearchParams(location.search), r = rq.get('reto'); if (r) { const d = document.createElement('div'); d.className = 'reto'; d.textContent = `⚔️ ${r} te retó a llegar al Nivel ${rq.get('nv') || 2}`; document.querySelector('.logo').after(d); } }
+})();
+
+</script>
+</body>
+</html>
