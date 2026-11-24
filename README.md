@@ -2,9 +2,11 @@
 
 Minijuego web de **mundo abierto** en **pixel art** con vista cenital, mezcla de aventura estilo Pokémon y caos de ciudad estilo GTA: roba autos, esquiva a la policía, cumple misiones, evoluciona y derrota al Líder del gimnasio en su propio gym.
 
-![Pantalla de inicio de Poké-City Sandbox: selección de personaje con sus evoluciones](assets/pantalla-inicio.png)
+![Pantalla de inicio de Poké-City Sandbox: selección de personaje con sus evoluciones](pantalla-inicio.png)
 
 Todo el juego vive en **un solo archivo HTML** (`poke_city_sandbox.html`), sin dependencias ni compilación. Solo la fuente pixel (*Press Start 2P*) se carga desde Google Fonts, y si no hay conexión usa una fuente monoespaciada.
+
+**[Jugar a Poké-City Sandbox](https://luciod3v.github.io/Poke-City-Sandbox/)** (disponible después de activar GitHub Pages).
 
 ## Características
 
@@ -45,6 +47,11 @@ Todo el juego vive en **un solo archivo HTML** (`poke_city_sandbox.html`), sin d
 ### Compartir y retar
 - El cuadro de victoria tiene **Compartir mi logro**: genera una imagen y usa el menú de compartir del dispositivo. En escritorio ofrece enlaces a X, WhatsApp y Facebook, copiar el mensaje o descargar la imagen.
 - El enlace compartido incluye un **reto**: quien lo abre ve «*X te retó a llegar al Nivel N*». Es un reto asíncrono, no en tiempo real.
+- Puedes escribir un alias opcional al comenzar. Se guarda únicamente en el navegador y se incluye en el enlace cuando compartes un reto; si lo dejas vacío se usa el nombre de la criatura. Para borrarlo, vacía el campo y comienza una partida.
+
+### Privacidad y estadísticas
+- El alias y el progreso se guardan en el navegador del jugador, no en el repositorio ni en una base de datos central.
+- Por ahora no se registran visitantes ni tiempo de juego globalmente. GitHub Pages solo sirve archivos estáticos; para esas estadísticas se necesitará configurar un servicio externo y avisar a los jugadores.
 
 ### Otros
 - **Brújula y marcadores** hacia el objetivo actual (misión activa, Líder o `P.C.`).
@@ -66,6 +73,15 @@ No requiere instalación ni compilación:
    python3 -m http.server 8080
    ```
    y visita `http://localhost:8080/poke_city_sandbox.html`.
+
+### Publicar en GitHub Pages
+
+1. Sube estos cambios a la rama `main` del repositorio en GitHub.
+2. En **Settings → Pages → Build and deployment**, selecciona **GitHub Actions** como fuente.
+3. En **Actions**, ejecuta el workflow **Publicar juego en GitHub Pages** si aún no se ha ejecutado. Los siguientes cambios en `main` se publicarán automáticamente.
+4. Cuando termine correctamente, comparte `https://luciod3v.github.io/Poke-City-Sandbox/`. En un fork, usa la URL que aparece en **Settings → Pages**.
+
+Si el repositorio es privado, la disponibilidad de Pages depende del plan de GitHub y la configuración del repositorio.
 
 ## Controles
 

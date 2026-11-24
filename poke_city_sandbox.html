@@ -518,6 +518,9 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges}
 .subtitle{font-size:8px;line-height:1.9;color:#fde7d3;max-width:640px;text-shadow:1px 1px 0 #000}
 .starter-card{background:rgba(17,24,39,.94)}.starter-card.selected{background:#78350f;outline:3px solid var(--accent)}
 .starter-name{font-size:11px}.starter-type{font-size:7px}.starter-desc{font-size:7px;line-height:1.7}
+.player-alias{width:min(100%,360px);margin:0 0 14px;font-size:8px;line-height:1.7;text-align:center}
+.player-alias input{display:block;width:100%;margin:5px 0;padding:10px;background:#111827;color:#fff;border:3px solid #000;font:inherit;user-select:text;-webkit-user-select:text}
+.player-alias p{margin:4px 0;color:#fde7d3}
 .sp-row{display:flex;gap:5px;margin-bottom:8px}
 .sp-row canvas{width:44px;height:44px;image-rendering:pixelated;background:#0b1020;border:2px solid #000}
 .btn-primary{font-size:12px;background:#ea580c;border-radius:0}
@@ -648,6 +651,13 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges}
     <p class="subtitle">Elige tu criatura y haz lo que quieras: roba autos, pelea contra el Líder y el Squad, sube de nivel y evoluciona, cumple misiones y sobrevive a la noche.<br><br>WASD mover · Clic/Espacio atacar · E especial · F subir/bajar de auto o bici · M misión</p>
 
     <div class="starter-grid" id="starter-grid"></div>
+
+    <div class="player-alias">
+      <label for="player-alias">Alias (opcional)</label>
+      <input id="player-alias" type="text" maxlength="30" autocomplete="nickname" aria-describedby="alias-info alias-status">
+      <p id="alias-info">Se guarda solo en este navegador. Se incluirá en el enlace si compartes un reto.</p>
+      <p id="alias-status" role="status"></p>
+    </div>
 
     <button class="btn-primary" id="btn-start">Comenzar Aventura</button>
   </div>
@@ -1567,12 +1577,30 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges}
     renderStarterCards();
     renderAchievementsList();
 
+    const aliasInput = document.getElementById('player-alias');
+    const aliasStatus = document.getElementById('alias-status');
+    try {
+      aliasInput.value = localStorage.getItem('pcs-alias') || '';
+    } catch (error) {
+      console.error('No se pudo leer el alias guardado:', error);
+      aliasStatus.textContent = 'El navegador no permite leer el alias guardado.';
+    }
+
     document.getElementById('btn-start').onclick = () => {
+      let aliasSaveFailed = false;
+      aliasInput.value = aliasInput.value.trim();
+      try {
+        if (aliasInput.value) localStorage.setItem('pcs-alias', aliasInput.value);
+        else localStorage.removeItem('pcs-alias');
+      } catch (error) {
+        console.error('No se pudo guardar el alias:', error);
+        aliasSaveFailed = true;
+      }
       applyLevelStats(true);
       state.running = true;
       document.getElementById('start-overlay').style.display = 'none';
       AudioEngine.startMusic(false);
-      showToast('¡Sigue la flecha de brújula para encontrar al Líder o pulsa Misión (M)!');
+      showToast(aliasSaveFailed ? 'No se pudo guardar el alias en este navegador.' : '¡Sigue la flecha de brújula para encontrar al Líder o pulsa Misión (M)!');
       updateHud();
     };
 
@@ -2241,7 +2269,7 @@ function makeCard(n) {
 }
 async function shareWin(n) {
   const base = location.protocol === 'file:' ? location.href.split('?')[0] : location.origin + location.pathname;
-  const link = base + '?reto=' + encodeURIComponent(getCurrentEvo().name) + '&nv=' + (n + 1), text = `¡Derroté al Líder ${LN[(n - 1) % LN.length]} y llegué al Nivel ${n + 1} en POKÉ-CITY! 🔥 ¿Puedes superarme?`;
+  const link = base + '?reto=' + encodeURIComponent(aliasInput.value || getCurrentEvo().name) + '&nv=' + (n + 1), text = `¡Derroté al Líder ${LN[(n - 1) % LN.length]} y llegué al Nivel ${n + 1} en POKÉ-CITY! 🔥 ¿Puedes superarme?`;
   try { const blob = await new Promise(r => winCard.toBlob(r)), f = new File([blob], 'poke-city.png', { type: 'image/png' }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text, url: link }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
   try { if (navigator.share) { await navigator.share({ text, url: link }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
   const t = encodeURIComponent(text), u = encodeURIComponent(link), box = $('lm-links');
