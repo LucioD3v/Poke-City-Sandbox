@@ -2,6 +2,8 @@
 
 Minijuego web de **mundo abierto** en **pixel art** con vista cenital, mezcla de aventura estilo Pokémon y caos de ciudad estilo GTA: roba autos, esquiva a la policía, cumple misiones, evoluciona y derrota al Líder del gimnasio en su propio gym.
 
+![Pantalla de inicio de Poké-City Sandbox: selección de personaje con sus evoluciones](assets/pantalla-inicio.png)
+
 Todo el juego vive en **un solo archivo HTML** (`poke_city_sandbox.html`), sin dependencias ni compilación. Solo la fuente pixel (*Press Start 2P*) se carga desde Google Fonts, y si no hay conexión usa una fuente monoespaciada.
 
 ## Características
