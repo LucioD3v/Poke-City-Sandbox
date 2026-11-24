@@ -6,7 +6,7 @@ Minijuego web de **mundo abierto** en **pixel art** con vista cenital, mezcla de
 
 Todo el juego vive en **un solo archivo HTML** (`poke_city_sandbox.html`), sin dependencias ni compilación. Solo la fuente pixel (*Press Start 2P*) se carga desde Google Fonts, y si no hay conexión usa una fuente monoespaciada.
 
-**[Jugar a Poké-City Sandbox](https://luciod3v.github.io/Poke-City-Sandbox/)** (disponible después de activar GitHub Pages).
+**[Jugar a Poké-City Sandbox](https://luciod3v.github.io/Poke-City-Sandbox/)**
 
 ## Características
 
