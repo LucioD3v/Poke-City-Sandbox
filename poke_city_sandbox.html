@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Poké-City Sandbox — RPG Pixel Sandbox</title>
   <style>
     :root {
@@ -545,6 +545,62 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges}
 #lm-links{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:10px}
 #lm-links a{font-size:8px;padding:7px 9px;background:#1f2937;color:#fde047;border:2px solid #000;text-decoration:none}
 .reto{margin:6px 0 10px;padding:8px 12px;background:#7f1d1d;border:3px solid #000;font-size:9px;color:#fde047;text-align:center}
+.mobile-instructions,.attack-mobile-hint{display:none}
+@media (max-width:700px), (pointer:coarse) {
+  #game-wrap{height:100vh;height:100dvh}
+  #game,.dpad{touch-action:none}
+  #start-overlay{justify-content:flex-start;padding:calc(16px + env(safe-area-inset-top)) 14px calc(20px + env(safe-area-inset-bottom))}
+  .logo{font-size:clamp(34px,10vw,56px)}
+  .subtitle{margin-bottom:14px}
+  .desktop-instructions{display:none}
+  .mobile-instructions{display:block}
+  .starter-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
+  .starter-card{padding:9px 7px}
+  .starter-name{font-size:9px}
+  .starter-desc{font-size:7px}
+  .sp-row{justify-content:center;gap:3px}
+  .sp-row canvas{width:min(27%,44px);height:auto;aspect-ratio:1}
+  .player-alias input{font-size:16px}
+  .hud-top{top:calc(6px + env(safe-area-inset-top));left:calc(6px + env(safe-area-inset-left));right:calc(6px + env(safe-area-inset-right));flex-wrap:nowrap;gap:4px}
+  .player-hud{min-width:0;width:min(42vw,185px)}
+  .hud-box{padding:5px}
+  .player-header,.wanted-cash{font-size:8px}
+  .wanted-cash{gap:4px}
+  .quick-actions{gap:3px}
+  .chip-btn{min-width:44px;min-height:44px;padding:5px;font-size:7px}
+  .hud-bottom{bottom:calc(8px + env(safe-area-inset-bottom));left:calc(8px + env(safe-area-inset-left));right:calc(8px + env(safe-area-inset-right));gap:4px}
+  .dpad{grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);gap:3px}
+  .dpad-btn.pressed{background:#a16207}
+  .dpad-center{font-size:8px}
+  .right-cluster{flex-direction:column-reverse;gap:5px}
+  .attack-row{gap:4px}
+  .atk-btn{min-width:0;width:clamp(72px,21vw,104px);min-height:48px;padding:5px;font-size:8px;text-align:center}
+  .atk-btn strong{font-size:8px;overflow-wrap:anywhere}
+  .atk-btn span{font-size:7px}
+  .attack-desktop-hint{display:none}
+  .attack-mobile-hint{display:inline}
+  #minimap{width:90px;height:66px}
+  .minimap-header{font-size:6px}
+  #skills{right:calc(8px + env(safe-area-inset-right));bottom:calc(180px + env(safe-area-inset-bottom));gap:3px;z-index:21}
+  .sk{min-height:44px;padding:6px;font-size:7px}
+  #boss-hud{top:calc(100px + env(safe-area-inset-top));width:min(260px,80vw)}
+  #qhud{top:calc(150px + env(safe-area-inset-top));left:calc(6px + env(safe-area-inset-left));max-width:75vw;white-space:pre-wrap}
+  #mission-card{top:calc(205px + env(safe-area-inset-top));left:calc(6px + env(safe-area-inset-left));width:min(210px,65vw)}
+  #toast{bottom:calc(165px + env(safe-area-inset-bottom));width:max-content}
+  #dlg{bottom:calc(10px + env(safe-area-inset-bottom));max-height:75vh;overflow-y:auto}
+  #dlg .dq button{min-height:44px}
+  #level-modal{align-items:flex-start}
+  .lm-card{margin:auto}
+}
+@media (pointer:coarse) and (max-height:500px) {
+  .dpad{grid-template-columns:repeat(3,38px);grid-template-rows:repeat(3,38px);gap:2px}
+  .dpad-btn{font-size:12px}
+  .minimap-box{position:fixed;right:calc(6px + env(safe-area-inset-right));top:calc(88px + env(safe-area-inset-top))}
+  #skills{bottom:calc(65px + env(safe-area-inset-bottom));flex-direction:row}
+  #mission-card{top:calc(88px + env(safe-area-inset-top))}
+  #qhud{top:calc(180px + env(safe-area-inset-top))}
+  #toast{bottom:calc(135px + env(safe-area-inset-bottom))}
+}
 </style>
 </head>
 <body>
@@ -611,13 +667,13 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges}
     <div class="hud-bottom">
       <div class="dpad" aria-label="Controles de movimiento">
         <div></div>
-        <button class="dpad-btn" data-dir="up">▲</button>
+        <button class="dpad-btn" data-dir="up" aria-label="Mover arriba">▲</button>
         <div></div>
-        <button class="dpad-btn" data-dir="left">◀</button>
-        <button class="dpad-btn dpad-center" id="btn-interact" title="Interactuar / Bici (F)">F</button>
-        <button class="dpad-btn" data-dir="right">▶</button>
+        <button class="dpad-btn" data-dir="left" aria-label="Mover a la izquierda">◀</button>
+        <button class="dpad-btn dpad-center" id="btn-interact" title="Interactuar / Bici (F)" aria-label="Interactuar">F</button>
+        <button class="dpad-btn" data-dir="right" aria-label="Mover a la derecha">▶</button>
         <div></div>
-        <button class="dpad-btn" data-dir="down">▼</button>
+        <button class="dpad-btn" data-dir="down" aria-label="Mover abajo">▼</button>
         <div></div>
       </div>
 
@@ -625,7 +681,7 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges}
         <div class="attack-row">
           <button class="atk-btn" id="btn-atk1">
             <strong id="atk1-label">Ataque</strong>
-            <span>Clic / Espacio</span>
+            <span class="attack-desktop-hint">Clic / Espacio</span><span class="attack-mobile-hint">ATAQUE</span>
           </button>
           <button class="atk-btn" id="btn-atk2">
             <strong id="atk2-label">Especial</strong>
@@ -648,7 +704,7 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges}
   <div id="start-overlay">
     <div class="title-badge">Sandbox Retro • Mundo Abierto</div>
     <h1 class="logo">POKÉ-CITY<small>SANDBOX</small></h1>
-    <p class="subtitle">Elige tu criatura y haz lo que quieras: roba autos, pelea contra el Líder y el Squad, sube de nivel y evoluciona, cumple misiones y sobrevive a la noche.<br><br>WASD mover · Clic/Espacio atacar · E especial · F subir/bajar de auto o bici · M misión</p>
+    <p class="subtitle">Elige tu criatura y haz lo que quieras: roba autos, pelea contra el Líder y el Squad, sube de nivel y evoluciona, cumple misiones y sobrevive a la noche.<span class="desktop-instructions"><br>WASD mover · Clic/Espacio atacar · E especial · F interactuar · M misión</span><span class="mobile-instructions"><br>Mantén las flechas para moverte · F para interactuar · Toca el escenario para atacar y apuntar</span></p>
 
     <div class="starter-grid" id="starter-grid"></div>
 
@@ -1642,13 +1698,41 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges}
     };
 
     // Botones táctiles direccionales
-    document.querySelectorAll('.dpad-btn[data-dir]').forEach(btn => {
-      const code = 'dir_' + btn.dataset.dir;
-      const setPress = (val) => { state.keys[code] = val; };
-      btn.addEventListener('pointerdown', (e) => { e.preventDefault(); setPress(true); });
-      btn.addEventListener('pointerup', () => setPress(false));
-      btn.addEventListener('pointerleave', () => setPress(false));
-      btn.addEventListener('pointercancel', () => setPress(false));
+    const dpad = document.querySelector('.dpad');
+    const directions = dpad.querySelectorAll('[data-dir]');
+    const dpadPointers = new Map();
+    function updateDirections() {
+      directions.forEach(btn => {
+        const pressed = [...dpadPointers.values()].includes(btn.dataset.dir);
+        state.keys['dir_' + btn.dataset.dir] = pressed;
+        btn.classList.toggle('pressed', pressed);
+      });
+    }
+    dpad.addEventListener('pointerdown', e => {
+      const btn = e.target.closest('[data-dir]');
+      if (!btn) return;
+      e.preventDefault();
+      dpadPointers.set(e.pointerId, btn.dataset.dir);
+      dpad.setPointerCapture(e.pointerId);
+      updateDirections();
+    });
+    dpad.addEventListener('pointermove', e => {
+      if (!dpadPointers.has(e.pointerId)) return;
+      const target = document.elementFromPoint(e.clientX, e.clientY);
+      const btn = target && target.closest('[data-dir]');
+      dpadPointers.set(e.pointerId, btn && dpad.contains(btn) ? btn.dataset.dir : null);
+      updateDirections();
+    });
+    function releaseDirection(e) {
+      if (dpadPointers.delete(e.pointerId)) updateDirections();
+    }
+    dpad.addEventListener('pointerup', releaseDirection);
+    dpad.addEventListener('pointercancel', releaseDirection);
+    dpad.addEventListener('lostpointercapture', releaseDirection);
+    window.addEventListener('blur', () => {
+      dpadPointers.clear();
+      updateDirections();
+      state.keys = {};
     });
 
     // Teclado
@@ -1668,15 +1752,15 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges}
     // Apuntar y disparar en canvas
     canvas.addEventListener('pointermove', (e) => {
       const rect = canvas.getBoundingClientRect();
-      state.pointer.x = e.clientX - rect.left;
-      state.pointer.y = e.clientY - rect.top;
+      state.pointer.x = (e.clientX - rect.left) * canvas.width / rect.width;
+      state.pointer.y = (e.clientY - rect.top) * canvas.height / rect.height;
       state.pointer.active = true;
     });
 
     canvas.addEventListener('pointerdown', (e) => {
       const rect = canvas.getBoundingClientRect();
-      state.pointer.x = e.clientX - rect.left;
-      state.pointer.y = e.clientY - rect.top;
+      state.pointer.x = (e.clientX - rect.left) * canvas.width / rect.width;
+      state.pointer.y = (e.clientY - rect.top) * canvas.height / rect.height;
       state.pointer.active = true;
       fireBasicAttack();
     });
@@ -2184,7 +2268,8 @@ function roomStep() {
   P.x = clamp(P.x, R.x + 14, R.x + R.w - 14); P.y = clamp(P.y, R.y + 40, R.y + R.h - 12);
   for (const o of inside.obs) { const cx = clamp(P.x, o.x, o.x + o.w), cy = clamp(P.y, o.y, o.y + o.h); let dx = P.x - cx, dy = P.y - cy, d = Math.hypot(dx, dy); if (d < 11) { if (d < .01) { dx = 0; dy = 1; d = 1; } P.x += dx / d * (11 - d); P.y += dy / d * (11 - d); } }
   if (inside.id === 'gym') { L.x = clamp(L.x, R.x + 20, R.x + R.w - 20); L.y = clamp(L.y, R.y + 40, R.y + R.h - 16); if (L.idle) state.projectiles = state.projectiles.filter(p => !p.fromPlayer); }
-  state.camera.x = R.x + R.w / 2 - canvas.width / 2; state.camera.y = R.y + R.h / 2 - canvas.height / 2; cds(0);
+  state.camera.x = canvas.width >= R.w ? R.x + R.w / 2 - canvas.width / 2 : clamp(P.x - canvas.width / 2, R.x, R.x + R.w - canvas.width);
+  state.camera.y = canvas.height >= R.h ? R.y + R.h / 2 - canvas.height / 2 : clamp(P.y - canvas.height / 2, R.y, R.y + R.h - canvas.height); cds(0);
 }
 function drawRoom() {
   const W = canvas.width, H = canvas.height, cx = Math.round(state.camera.x), cy = Math.round(state.camera.y), R = inside.R, g = inside.id === 'gym', L = state.leader, P = state.player;

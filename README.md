@@ -97,6 +97,8 @@ Si el repositorio es privado, la disponibilidad de Pages depende del plan de Git
 | Nueva misión | `M` | Botón `Misión (M)` |
 | Conducir un auto | `W`/`S` acelerar y frenar, `A`/`D` girar | Cruceta |
 
+En teléfonos puedes jugar en vertical u horizontal. Mantén una flecha de la cruceta para moverte y desliza el dedo hacia otra para cambiar de dirección; usa `F` para interactuar. Toca el escenario para apuntar y atacar, o usa los botones de ataque para apuntar automáticamente. Toca el cuadro de diálogo para avanzar.
+
 ## Estructura del código
 
 Todo está en `poke_city_sandbox.html`, con **dos bloques `<script>`**:
